@@ -1,0 +1,1587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heavy-Duty Stage Turntable Calculator</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Three.js & OrbitControls -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #0f172a; }
+        /* Custom scrollbar for dark theme */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        
+        .input-group label { font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 0.25rem; }
+        .input-group input, .input-group select { 
+            width: 100%; 
+            background: #1e293b; 
+            border: 1px solid #334155; 
+            color: #f8fafc; 
+            padding: 0.5rem; 
+            border-radius: 0.375rem; 
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+        .input-group input:focus, .input-group select:focus { outline: none; border-color: #3b82f6; ring: 2px solid #3b82f6; }
+        .input-group input[type="color"] {
+            padding: 0.1rem;
+            height: 2.5rem;
+        }
+        /* Slider Styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            margin-top: -6px;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #334155;
+            border-radius: 2px;
+        }
+        /* Remove default spinners */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        
+        .result-card { background: #1e293b; padding: 1rem; border-radius: 0.5rem; margin-bottom: 0.5rem; border-left: 4px solid #3b82f6; }
+        .result-label { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
+        .result-value { font-size: 1.25rem; font-weight: 700; color: #f1f5f9; }
+        .result-unit { font-size: 0.75rem; color: #64748b; margin-left: 0.25rem; }
+
+        .warning-box { background: #451a03; border-left-color: #f59e0b; color: #fbbf24; }
+        .error-box { background: #450a0a; border-left-color: #ef4444; color: #fca5a5; }
+
+        #canvas-container { width: 100%; height: 100%; position: relative; }
+        #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; }
+
+        /* Mobile Tab Active State */
+        .tab-active { border-bottom: 2px solid #3b82f6; color: #3b82f6; background-color: #1e293b; }
+        .tab-inactive { color: #64748b; }
+    </style>
+</head>
+<body class="flex flex-col md:flex-row h-screen text-slate-200 font-sans overflow-hidden">
+
+    <!-- 3D VIEW (Order 1 on Mobile, Order 2 on Desktop) -->
+    <div class="relative order-1 md:order-2 w-full h-[40vh] md:h-full md:flex-1 bg-black flex flex-col shrink-0">
+        <div id="canvas-container">
+            <div id="loading">Loading 3D Engine...</div>
+        </div>
+        
+        <!-- Overlay HUD -->
+        <div class="absolute top-4 left-4 bg-black/60 backdrop-blur-sm p-3 rounded border border-slate-700 pointer-events-none select-none z-10">
+            <div class="text-xs text-slate-400">Simulation Status</div>
+            <div class="text-sm font-bold text-green-400"><span id="anim-rpm">0.0</span> RPM</div>
+            <div class="text-xs text-slate-500 mt-1">Viewing: <span id="view-dim">20</span>m Stage</div>
+            <div class="text-xs text-blue-400 mt-1">Drive Radius: <span id="view-drive-rad">9.5</span>m</div>
+        </div>
+
+        <!-- Camera Home Button -->
+        <button id="btn-home-cam" class="absolute bottom-4 right-4 bg-slate-800 hover:bg-slate-700 text-white w-10 h-10 rounded-full shadow-lg border border-slate-600 flex items-center justify-center transition-all z-20" title="Reset Camera">
+            <i class="fa-solid fa-house"></i>
+        </button>
+    </div>
+
+    <!-- MOBILE TABS (Order 2 on Mobile, Hidden on Desktop) -->
+    <div class="order-2 md:hidden flex h-12 bg-slate-900 border-b border-slate-800 shrink-0 z-20">
+        <button id="tab-inputs" class="flex-1 font-bold text-sm transition-colors tab-active">
+            <i class="fa-solid fa-sliders mr-2"></i>Inputs
+        </button>
+        <button id="tab-results" class="flex-1 font-bold text-sm transition-colors tab-inactive">
+            <i class="fa-solid fa-chart-pie mr-2"></i>Results
+        </button>
+    </div>
+
+    <!-- LEFT SIDEBAR: INPUTS (Order 3 on Mobile, Order 1 on Desktop) -->
+    <div id="sidebar-inputs" class="order-3 md:order-1 w-full md:w-80 bg-slate-900 border-r border-slate-800 flex flex-col h-full overflow-y-auto z-10 shadow-xl">
+        <div class="p-5 border-b border-slate-800 bg-slate-900 sticky top-0 z-20">
+            <h1 class="text-xl font-bold text-blue-500"><i class="fa-solid fa-gear fa-spin mr-2"></i> Turntable Calc</h1>
+            
+            <!-- MODE SWITCHER -->
+            <div class="bg-slate-800 p-1 rounded-lg flex mt-3 border border-slate-700">
+                <button id="mode-normal" class="flex-1 py-1.5 px-2 rounded-md bg-blue-600 text-white text-xs font-bold transition-all shadow-lg">
+                    Calc Power
+                </button>
+                <button id="mode-reverse" class="flex-1 py-1.5 px-2 rounded-md text-slate-400 text-xs font-bold hover:text-white hover:bg-slate-700 transition-all">
+                    Calc Load
+                </button>
+            </div>
+        </div>
+
+        <div class="p-5 space-y-4 pb-20 md:pb-5">
+            <!-- Geometry -->
+            <div class="space-y-3">
+                <h3 class="text-xs font-semibold text-slate-400 uppercase border-b border-slate-800 pb-1">Primary Inputs</h3>
+                
+                <div class="input-group">
+                    <label>Turntable Diameter (m)</label>
+                    <input type="number" id="diameter" value="20" step="0.5" min="1">
+                </div>
+
+                <!-- DYNAMIC INPUT: MASS OR POWER -->
+                <div id="input-container-mass" class="input-group transition-all">
+                    <label class="text-blue-300">Total Moving Mass (Tons)</label>
+                    <input type="number" id="mass" value="100" step="1" min="1" class="border-blue-900/50 bg-blue-900/10 focus:border-blue-500">
+                </div>
+
+                <div id="input-container-power" class="input-group hidden transition-all">
+                    <label class="text-emerald-300">Motor Power per Motor (kW)</label>
+                    <input type="number" id="inputPower" value="5.5" step="0.5" min="0.1" class="border-emerald-900/50 bg-emerald-900/10 focus:border-emerald-500">
+                </div>
+            </div>
+
+            <!-- Kinematics -->
+            <div class="space-y-3 pt-2">
+                <h3 class="text-xs font-semibold text-slate-400 uppercase border-b border-slate-800 pb-1">Kinematics</h3>
+                <div class="input-group">
+                    <label>Target Speed (RPM)</label>
+                    <input type="number" id="rpm" value="1" step="0.1" min="0.1">
+                </div>
+                <div class="input-group">
+                    <label>Acceleration Time (sec)</label>
+                    <input type="number" id="accelTime" value="15" step="1" min="1">
+                </div>
+            </div>
+
+            <!-- Drive System -->
+            <div class="space-y-3 pt-2">
+                <h3 class="text-xs font-semibold text-slate-400 uppercase border-b border-slate-800 pb-1">Drive System</h3>
+                
+                <!-- Drive Type Switcher -->
+                <div class="bg-slate-800 p-2 rounded border border-slate-700 mb-2">
+                    <label class="text-xs text-slate-400 uppercase font-bold mb-2 block">Transmission Type</label>
+                    <div class="flex gap-2">
+                        <label class="flex-1 cursor-pointer">
+                            <input type="radio" name="driveType" value="wheel" checked class="peer sr-only">
+                            <div class="text-center py-1.5 rounded bg-slate-700 peer-checked:bg-blue-500 peer-checked:text-white text-xs text-slate-300 transition-all border border-slate-600 peer-checked:border-blue-400">
+                                <i class="fa-solid fa-compact-disc mr-1"></i> Wheel
+                            </div>
+                        </label>
+                        <label class="flex-1 cursor-pointer">
+                            <input type="radio" name="driveType" value="gear" class="peer sr-only">
+                            <div class="text-center py-1.5 rounded bg-slate-700 peer-checked:bg-amber-600 peer-checked:text-white text-xs text-slate-300 transition-all border border-slate-600 peer-checked:border-amber-500">
+                                <i class="fa-solid fa-gear mr-1"></i> Gear
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Motor Position Slider -->
+                <div class="input-group bg-slate-800 p-2 rounded border border-slate-700">
+                    <label class="text-blue-300">Drive Radius (Position)</label>
+                    <div class="flex items-center gap-2">
+                        <input type="range" id="driveRadiusSlider" min="0.1" max="10" step="0.1" value="9.5" class="flex-1">
+                        <span class="text-xs w-12 text-right"><span id="driveRadiusVal">9.5</span> m</span>
+                    </div>
+                    <div class="text-[10px] text-slate-500 mt-1">Distance from Center</div>
+                </div>
+
+                <!-- Motors Count -->
+                <div class="input-group">
+                    <label>Number of Drive Motors</label>
+                    <div class="flex h-10">
+                        <button type="button" id="motorDec" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 rounded-l-md border border-slate-600 transition-colors font-bold text-lg">-</button>
+                        <input type="number" id="motors" value="4" step="1" min="1" class="flex-1 text-center bg-slate-800 border-y border-slate-600 focus:outline-none focus:border-blue-500 rounded-none h-full m-0 text-white font-bold">
+                        <button type="button" id="motorInc" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 rounded-r-md border border-slate-600 transition-colors font-bold text-lg">+</button>
+                    </div>
+                </div>
+
+                <!-- DYNAMIC DRIVE INPUTS -->
+                <div id="drive-input-wheel" class="input-group">
+                    <label>Drive Wheel Diameter (mm)</label>
+                    <input type="number" id="wheelDia" value="400" step="10">
+                </div>
+
+                <div id="drive-input-gear" class="hidden flex gap-2">
+                    <div class="input-group w-1/2">
+                        <label class="text-amber-300">Turntable Teeth</label>
+                        <input type="number" id="teethTurntable" value="300" step="1" class="border-amber-900/50 focus:border-amber-500">
+                    </div>
+                    <div class="input-group w-1/2">
+                        <label class="text-amber-300">Pinion Teeth</label>
+                        <input type="number" id="teethPinion" value="15" step="1" class="border-amber-900/50 focus:border-amber-500">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label class="text-red-300"><i class="fa-solid fa-gauge-high mr-1"></i>Rated Motor Speed (RPM)</label>
+                    <input type="number" id="maxMotorRpm" value="1500" step="10" class="border-red-900/50 bg-red-900/10 focus:border-red-500 focus:ring-red-500">
+                </div>
+                <div class="flex gap-2">
+                    <div class="input-group w-1/2">
+                        <label>Gearbox Ratio (i)</label>
+                        <input type="number" id="gearRatio" value="30" step="1">
+                    </div>
+                    <div class="input-group w-1/2">
+                        <label>Efficiency (η)</label>
+                        <input type="number" id="efficiency" value="0.9" step="0.05" max="1" min="0.1">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Advanced / Friction -->
+            <div class="space-y-3 pt-2">
+                <h3 class="text-xs font-semibold text-slate-400 uppercase border-b border-slate-800 pb-1">Friction Coeffs (μ)</h3>
+                <div class="flex gap-2 mb-2">
+                    <div class="input-group w-1/2">
+                        <label>Rolling (Dynamic)</label>
+                        <input type="number" id="muRolling" value="0.02" step="0.005" min="0.001">
+                    </div>
+                    <div class="input-group w-1/2">
+                        <label>Static (Start)</label>
+                        <input type="number" id="muStatic" value="0.05" step="0.005" min="0.001">
+                    </div>
+                </div>
+                <!-- PRESET BUTTONS -->
+                <div class="flex gap-2">
+                    <button id="btn-fric-clean" class="flex-1 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 py-1 rounded border border-slate-700 transition-colors">
+                        <i class="fa-solid fa-sparkles mr-1"></i> Clean
+                    </button>
+                    <button id="btn-fric-dusty" class="flex-1 bg-slate-800 hover:bg-slate-700 text-xs text-amber-500 py-1 rounded border border-slate-700 transition-colors">
+                        <i class="fa-solid fa-wind mr-1"></i> Dusty (x2)
+                    </button>
+                </div>
+            </div>
+
+             <!-- Appearance -->
+             <div class="space-y-3 pt-2">
+                <h3 class="text-xs font-semibold text-slate-400 uppercase border-b border-slate-800 pb-1">Appearance</h3>
+                <div class="flex gap-2">
+                    <div class="input-group w-1/2">
+                        <label>Stage Color</label>
+                        <input type="color" id="colorStage" value="#475569">
+                    </div>
+                    <div class="input-group w-1/2">
+                        <label>Background</label>
+                        <input type="color" id="colorBg" value="#0f172a">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT SIDEBAR: RESULTS (Order 3 on Mobile, Order 3 on Desktop) -->
+    <div id="sidebar-results" class="order-3 md:order-3 w-full md:w-80 bg-slate-900 border-l border-slate-800 flex flex-col h-full overflow-y-auto shadow-xl hidden md:flex">
+        <div class="p-5 border-b border-slate-800 bg-slate-900 sticky top-0 z-20">
+            <div class="flex items-center justify-between mb-2">
+                <h2 class="text-lg font-bold text-slate-200">Engineering Results</h2>
+                <button id="btn-report" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-bold transition-colors flex items-center gap-1">
+                    <i class="fa-solid fa-file-lines"></i> Report
+                </button>
+            </div>
+            <p class="text-xs text-slate-500">Real-time Calculation</p>
+        </div>
+
+        <div class="p-5 space-y-4 pb-20 md:pb-5">
+            <!-- RPM Limit Warning -->
+            <div id="rpm-warning" class="result-card error-box hidden">
+                <div class="flex items-center gap-2 mb-1">
+                    <i class="fa-solid fa-gauge-simple-high"></i>
+                    <div class="result-label text-red-200 font-bold">Motor Speed Exceeded!</div>
+                </div>
+                <div class="text-sm mb-2">
+                    Required RPM > Limit. Performance Capped.
+                </div>
+                <div class="flex justify-between text-xs border-t border-red-800/50 pt-2">
+                    <span>Target Stage Speed:</span>
+                    <span class="line-through opacity-50" id="warn-target-rpm">0</span>
+                </div>
+                <div class="flex justify-between text-xs font-bold text-white mt-1">
+                    <span>Actual Stage Speed:</span>
+                    <span id="warn-actual-rpm">0</span> RPM
+                </div>
+            </div>
+            
+            <!-- MAIN RESULT CARD -->
+            <div class="result-card bg-slate-800 border-l-emerald-500" id="main-result-card">
+                <div class="result-label text-emerald-400 font-bold mb-2" id="main-result-title"> 
+                    <i class="fa-solid fa-clipboard-check"></i> Recommended Motor Spec
+                </div>
+                
+                <!-- Display for Normal Mode -->
+                <div id="res-block-normal">
+                    <div class="mb-3">
+                        <div class="text-xs text-slate-400">Required Motor Speed @ Shaft</div>
+                        <span class="result-value text-emerald-300" id="res-motor-rpm">0</span>
+                        <span class="result-unit">RPM</span>
+                    </div>
+                    <div class="mb-3">
+                        <div class="text-xs text-slate-400">Required Motor Torque @ Operating Speed</div>
+                        <span class="result-value text-emerald-300" id="res-motor-torque">0</span>
+                        <span class="result-unit">Nm</span>
+                        <div class="text-[10px] text-slate-500 mt-1">At <span id="torque-rpm">0</span> RPM</div>
+                    </div>
+                    <div class="mb-3 border-t border-slate-700 pt-3">
+                        <div class="text-xs text-slate-400">Required Motor Power (Rated)</div>
+                        <span class="result-value text-emerald-300" id="res-power">0.00</span>
+                        <span class="result-unit">kW</span>
+                        <span class="result-value text-emerald-300/70 text-sm ml-2" id="res-power-hp">(0.00 hp)</span>
+                        <div class="text-[10px] text-slate-500 mt-1">At Rated RPM (<span id="rated-rpm-display">1500</span> RPM)</div>
+                    </div>
+                    <div class="mb-3 border-t border-slate-700 pt-3">
+                        <div class="text-xs text-slate-400">Total Power Required</div>
+                        <span class="result-value text-emerald-300" id="res-power-total">0.00</span>
+                        <span class="result-unit">kW</span>
+                        <div class="text-[10px] text-slate-500 mt-1">For <span id="total-motors-count">4</span> Motors</div>
+                    </div>
+                    <div class="mb-3 border-t border-slate-700 pt-3">
+                        <div class="text-xs text-slate-400">Total Apparent Power (VA)</div>
+                        <span class="result-value text-blue-300" id="res-power-va">0.00</span>
+                        <span class="result-unit">kVA</span>
+                        <div class="text-[10px] text-slate-500 mt-1">Building Power Requirement</div>
+                    </div>
+                    <div class="mb-3 border-t border-slate-700 pt-3">
+                        <div class="text-xs text-slate-400">Total Current</div>
+                        <span class="result-value text-amber-300" id="res-current">0.00</span>
+                        <span class="result-unit">A</span>
+                        <div class="text-[10px] text-slate-500 mt-1">Per Phase @ 380V (3-Phase)</div>
+                    </div>
+                    <div class="text-xs text-slate-500 italic border-t border-slate-700 pt-2">
+                        <i class="fa-solid fa-info-circle mr-1"></i>
+                        <span id="power-torque-note">Power calculated to ensure torque capability</span>
+                    </div>
+                </div>
+
+                <!-- Display for Reverse Mode -->
+                <div id="res-block-reverse" class="hidden">
+                    <div class="mb-3 border-b border-slate-700 pb-2">
+                        <div class="text-xs text-slate-400">Max Permissible Load</div>
+                        <span class="result-value text-emerald-300 text-3xl" id="res-max-load">0</span>
+                        <span class="result-unit text-lg">Tons</span>
+                    </div>
+                     <div class="mb-1">
+                        <div class="text-xs text-slate-400">Limiting Factor</div>
+                        <span class="text-xs text-yellow-300" id="res-limit-factor">Static Friction</span>
+                    </div>
+                    
+                    <!-- Electrical Info for Reverse Mode -->
+                    <div class="mb-3 border-t border-slate-700 pt-3 mt-3">
+                        <div class="text-xs text-slate-400">Total Installed Power</div>
+                        <span class="result-value text-emerald-300" id="res-power-total-rev">0.00</span>
+                        <span class="result-unit">kW</span>
+                        <div class="text-[10px] text-slate-500 mt-1">Input Power × <span id="total-motors-count-rev">4</span> Motors</div>
+                    </div>
+                    <div class="mb-3 border-t border-slate-700 pt-3">
+                        <div class="text-xs text-slate-400">Total Apparent Power (VA)</div>
+                        <span class="result-value text-blue-300" id="res-power-va-rev">0.00</span>
+                        <span class="result-unit">kVA</span>
+                        <div class="text-[10px] text-slate-500 mt-1">Building Power Requirement</div>
+                    </div>
+                    <div class="mb-3 border-t border-slate-700 pt-3">
+                        <div class="text-xs text-slate-400">Total Current</div>
+                        <span class="result-value text-amber-300" id="res-current-rev">0.00</span>
+                        <span class="result-unit">A</span>
+                        <div class="text-[10px] text-slate-500 mt-1">Per Phase @ 380V (3-Phase)</div>
+                    </div>
+
+                    <div class="text-[10px] text-slate-500 italic mt-1 border-t border-slate-700 pt-2">
+                        *Constrained by Motor Rated Torque at Low RPM
+                    </div>
+                </div>
+            </div>
+
+            <!-- Torque Analysis -->
+            <div class="result-card bg-slate-800 border-l-purple-500">
+                <div class="result-label text-purple-300 mb-2" id="torque-card-title">System Torque Analysis</div>
+                <div class="flex justify-between border-b border-slate-700 pb-1 mb-1">
+                    <span class="text-xs text-slate-400">Breakaway (Static)</span>
+                    <span class="text-sm font-mono text-pink-400" id="res-t-static">0</span>
+                </div>
+                <div class="flex justify-between border-b border-slate-700 pb-1 mb-1">
+                    <span class="text-xs text-slate-400">Rolling (Dynamic)</span>
+                    <span class="text-sm font-mono text-slate-300" id="res-t-fric">0</span>
+                </div>
+                <div class="flex justify-between pb-1">
+                    <span class="text-xs text-slate-400">Acceleration</span>
+                    <span class="text-sm font-mono text-slate-300" id="res-t-accel">0</span>
+                </div>
+                <div class="mt-2 pt-2 border-t border-slate-600">
+                    <div class="text-xs text-slate-500" id="peak-torque-label">Peak Torque Needed</div>
+                    <span class="result-value text-purple-400" id="res-peak-torque">0</span>
+                    <span class="result-unit">Nm</span>
+                    <div class="text-[10px] text-slate-500 italic mt-1" id="peak-reason">Reason: Accel + Rolling</div>
+                </div>
+            </div>
+
+            <!-- Force Mechanics -->
+            <div class="space-y-2">
+                <h3 class="text-xs font-semibold text-slate-500 uppercase">Drive Mechanics</h3>
+                <div class="flex justify-between items-center text-sm border-b border-slate-800 pb-2">
+                    <span class="text-slate-400" id="lbl-force-output">Tangential Force (Per Wheel)</span>
+                    <span class="text-slate-200"><span id="res-force-wheel">0</span> kN</span>
+                </div>
+                <div class="flex justify-between items-center text-sm border-b border-slate-800 pb-2">
+                    <span class="text-slate-400" id="lbl-speed-output">Wheel Speed</span>
+                    <span class="text-slate-200"><span id="res-wheel-rpm">0</span> RPM</span>
+                </div>
+                 <div class="flex justify-between items-center text-sm border-b border-slate-800 pb-2">
+                    <span class="text-slate-400">Drive Radius</span>
+                    <span class="text-slate-200"><span id="res-drive-rad">0</span> m</span>
+                </div>
+            </div>
+
+            <!-- Safety / Traction -->
+            <div id="traction-warning" class="result-card warning-box hidden">
+                <div class="flex items-center gap-2 mb-1">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <div class="result-label text-yellow-200">Slippage Risk (Startup)</div>
+                </div>
+                <div class="text-xs mt-2 opacity-80">
+                    Min. Downward Force needed per wheel to overcome Static Friction: <br>
+                    <span class="font-bold text-lg" id="res-min-weight">0.0</span> Tons
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- REPORT MODAL -->
+    <div id="report-modal" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-slate-700">
+            <div class="sticky top-0 bg-slate-900 border-b border-slate-800 p-5 flex items-center justify-between z-10">
+                <h2 class="text-xl font-bold text-blue-400" id="report-title">
+                    <i class="fa-solid fa-file-lines mr-2"></i>Technical Specification Report
+                </h2>
+                <button id="btn-close-report" class="text-slate-400 hover:text-white transition-colors">
+                    <i class="fa-solid fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="p-5 space-y-4">
+                <!-- Motor Specification -->
+                <div class="bg-slate-800 rounded-lg p-4 border-l-4 border-blue-500">
+                    <h3 class="text-sm font-bold text-blue-300 mb-3 uppercase">Motor Specification</h3>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">Motor Power (per motor):</span>
+                            <span class="text-white font-bold" id="report-power">-</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">Number of Motors:</span>
+                            <span class="text-white font-bold" id="report-motors">-</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">Motor Speed (RPM):</span>
+                            <span class="text-white font-bold" id="report-motor-rpm">-</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">Total Power:</span>
+                            <span class="text-emerald-300 font-bold" id="report-total-power">-</span>
+                        </div>
+                        <div class="flex justify-between border-t border-slate-700 pt-2 mt-2">
+                            <span class="text-slate-400">Total Apparent Power (VA):</span>
+                            <span class="text-blue-300 font-bold" id="report-power-va">-</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">Total Current:</span>
+                            <span class="text-amber-300 font-bold" id="report-current">-</span>
+                        </div>
+                        <div class="text-[10px] text-slate-500 mt-2 italic border-t border-slate-700 pt-2">
+                            <i class="fa-solid fa-building mr-1"></i>Building Power Requirement: 3-Phase 380V, PF=0.85
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Load Capacity -->
+                <div class="bg-slate-800 rounded-lg p-4 border-l-4 border-emerald-500">
+                    <h3 class="text-sm font-bold text-emerald-300 mb-3 uppercase">Load Capacity</h3>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-slate-400" id="label-report-load">Maximum Load:</span>
+                            <span class="text-emerald-300 font-bold text-lg" id="report-load">-</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">Stage Diameter:</span>
+                            <span class="text-white font-bold" id="report-diameter">-</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">Target Stage Speed:</span>
+                            <span class="text-white font-bold" id="report-stage-rpm">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Drive System -->
+                <div class="bg-slate-800 rounded-lg p-4 border-l-4 border-amber-500">
+                    <h3 class="text-sm font-bold text-amber-300 mb-3 uppercase">Drive System</h3>
+                    <div class="space-y-3">
+                        <!-- Drive Type -->
+                        <div class="flex justify-between items-center pb-2 border-b border-slate-700">
+                            <span class="text-slate-400">Drive Type:</span>
+                            <span class="text-white font-bold" id="report-drive-type">-</span>
+                        </div>
+                        
+                        <!-- Wheel Drive Info -->
+                        <div id="report-wheel-info" class="space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">Wheel Diameter:</span>
+                                <span class="text-white font-bold" id="report-wheel-dia">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">Drive Radius:</span>
+                                <span class="text-white font-bold" id="report-drive-radius">-</span>
+                            </div>
+                        </div>
+
+                        <!-- Gear Drive Info -->
+                        <div id="report-gear-info" class="hidden space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">Turntable Teeth:</span>
+                                <span class="text-white font-bold" id="report-teeth-turntable">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">Pinion Teeth:</span>
+                                <span class="text-white font-bold" id="report-teeth-pinion">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">Gear Ratio (Stage:Pinion):</span>
+                                <span class="text-white font-bold" id="report-gear-ratio-stage">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">Drive Radius:</span>
+                                <span class="text-white font-bold" id="report-gear-drive-radius">-</span>
+                            </div>
+                        </div>
+
+                        <!-- Gearbox -->
+                        <div class="pt-2 border-t border-slate-700 space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">Gearbox Ratio:</span>
+                                <span class="text-white font-bold" id="report-gearbox-ratio">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">Total Ratio:</span>
+                                <span class="text-amber-300 font-bold" id="report-total-ratio">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">Efficiency:</span>
+                                <span class="text-white font-bold" id="report-efficiency">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Performance Summary -->
+                <div class="bg-slate-800 rounded-lg p-4 border-l-4 border-purple-500">
+                    <h3 class="text-sm font-bold text-purple-300 mb-3 uppercase">Performance Summary</h3>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">Peak Torque Required:</span>
+                            <span class="text-white font-bold" id="report-peak-torque">-</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">Acceleration Time:</span>
+                            <span class="text-white font-bold" id="report-accel-time">-</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">Friction (Rolling):</span>
+                            <span class="text-white font-bold" id="report-mu-rolling">-</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">Friction (Static):</span>
+                            <span class="text-white font-bold" id="report-mu-static">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- GLOBAL VARIABLES ---
+        let scene, camera, renderer, controls;
+        let turntableGroup, stageMesh, gridHelper;
+        let motors = [];
+        let actualStageRpm = 0; 
+        let actualDriveRpm = 0; 
+        let animationStageRpm = 0; // RPM for 3D animation (uses input value)
+        let animationDriveRpm = 0; // Drive RPM for 3D animation
+        let isReverseMode = false;
+        let isGearDrive = false;
+        
+        // Physics Constants
+        const g = 9.81;
+        const mu_traction = 0.3;
+
+        // --- DOM ELEMENTS ---
+        const inputs = {
+            diameter: document.getElementById('diameter'),
+            mass: document.getElementById('mass'),
+            inputPower: document.getElementById('inputPower'), 
+            rpm: document.getElementById('rpm'),
+            accelTime: document.getElementById('accelTime'),
+            motors: document.getElementById('motors'),
+            motorDec: document.getElementById('motorDec'), 
+            motorInc: document.getElementById('motorInc'), 
+            driveRadios: document.getElementsByName('driveType'),
+            containerWheel: document.getElementById('drive-input-wheel'),
+            containerGear: document.getElementById('drive-input-gear'),
+            wheelDia: document.getElementById('wheelDia'),
+            teethTurntable: document.getElementById('teethTurntable'),
+            teethPinion: document.getElementById('teethPinion'),
+            gearRatio: document.getElementById('gearRatio'),
+            efficiency: document.getElementById('efficiency'),
+            muRolling: document.getElementById('muRolling'),
+            muStatic: document.getElementById('muStatic'),
+            maxMotorRpm: document.getElementById('maxMotorRpm'),
+            colorStage: document.getElementById('colorStage'),
+            colorBg: document.getElementById('colorBg'),
+            driveRadiusSlider: document.getElementById('driveRadiusSlider'),
+            driveRadiusVal: document.getElementById('driveRadiusVal'),
+            containerMass: document.getElementById('input-container-mass'),
+            containerPower: document.getElementById('input-container-power'),
+            btnNormal: document.getElementById('mode-normal'),
+            btnReverse: document.getElementById('mode-reverse'),
+            // UI
+            tabInputs: document.getElementById('tab-inputs'),
+            tabResults: document.getElementById('tab-results'),
+            sidebarInputs: document.getElementById('sidebar-inputs'),
+            sidebarResults: document.getElementById('sidebar-results'),
+            btnHomeCam: document.getElementById('btn-home-cam'),
+            // Friction Buttons
+            btnFricClean: document.getElementById('btn-fric-clean'),
+            btnFricDusty: document.getElementById('btn-fric-dusty'),
+            // Report
+            btnReport: document.getElementById('btn-report'),
+            btnCloseReport: document.getElementById('btn-close-report'),
+            reportModal: document.getElementById('report-modal'),
+        };
+
+        const outputs = {
+            mainTitle: document.getElementById('main-result-title'),
+            blockNormal: document.getElementById('res-block-normal'),
+            blockReverse: document.getElementById('res-block-reverse'),
+            motorRpm: document.getElementById('res-motor-rpm'),
+            motorTorque: document.getElementById('res-motor-torque'),
+            power: document.getElementById('res-power'),
+            powerHp: document.getElementById('res-power-hp'),
+            powerTotal: document.getElementById('res-power-total'),
+            totalMotorsCount: document.getElementById('total-motors-count'),
+            powerVA: document.getElementById('res-power-va'),
+            current: document.getElementById('res-current'),
+            
+            // Reverse Mode Electrical Outputs
+            powerTotalRev: document.getElementById('res-power-total-rev'),
+            totalMotorsCountRev: document.getElementById('total-motors-count-rev'),
+            powerVARev: document.getElementById('res-power-va-rev'),
+            currentRev: document.getElementById('res-current-rev'),
+            
+            maxLoad: document.getElementById('res-max-load'),
+            limitFactor: document.getElementById('res-limit-factor'),
+            peakTorque: document.getElementById('res-peak-torque'),
+            peakReason: document.getElementById('peak-reason'),
+            torqueTitle: document.getElementById('torque-card-title'),
+            peakTorqueLabel: document.getElementById('peak-torque-label'),
+            tStatic: document.getElementById('res-t-static'),
+            tFric: document.getElementById('res-t-fric'),
+            tAccel: document.getElementById('res-t-accel'),
+            forceWheel: document.getElementById('res-force-wheel'),
+            wheelRpm: document.getElementById('res-wheel-rpm'),
+            minWeight: document.getElementById('res-min-weight'),
+            resDriveRad: document.getElementById('res-drive-rad'),
+            tractionBox: document.getElementById('traction-warning'),
+            rpmWarning: document.getElementById('rpm-warning'),
+            warnTargetRpm: document.getElementById('warn-target-rpm'),
+            warnActualRpm: document.getElementById('warn-actual-rpm'),
+            animRpm: document.getElementById('anim-rpm'),
+            viewDim: document.getElementById('view-dim'),
+            viewDriveRad: document.getElementById('view-drive-rad'),
+            lblForceOutput: document.getElementById('lbl-force-output'),
+            lblSpeedOutput: document.getElementById('lbl-speed-output')
+        };
+
+        // --- INITIALIZATION ---
+        function init() {
+            const container = document.getElementById('canvas-container');
+            document.getElementById('loading').remove();
+
+            setupScene(container);
+            window.addEventListener('resize', onWindowResize);
+            
+            // Inputs Event Listeners
+            Object.values(inputs).forEach(input => {
+                if(input instanceof HTMLElement && ['input', 'select'].includes(input.tagName.toLowerCase())) {
+                    input.addEventListener('input', (e) => {
+                        handleInput(e.target.id);
+                        calculateAndRender();
+                        updateColors();
+                    });
+                }
+            });
+
+            // Radio Buttons
+            inputs.driveRadios.forEach(radio => {
+                radio.addEventListener('change', (e) => setDriveType(e.target.value));
+            });
+
+            // Motor Buttons
+            inputs.motorDec.addEventListener('click', () => {
+                let val = parseInt(inputs.motors.value) || 0;
+                if (val > 1) {
+                    inputs.motors.value = val - 1;
+                    inputs.motors.dispatchEvent(new Event('input'));
+                }
+            });
+            inputs.motorInc.addEventListener('click', () => {
+                let val = parseInt(inputs.motors.value) || 0;
+                inputs.motors.value = val + 1;
+                inputs.motors.dispatchEvent(new Event('input'));
+            });
+
+            // Modes
+            inputs.btnNormal.addEventListener('click', () => setMode(false));
+            inputs.btnReverse.addEventListener('click', () => setMode(true));
+
+            // Tabs (Mobile)
+            inputs.tabInputs.addEventListener('click', () => switchTab('inputs'));
+            inputs.tabResults.addEventListener('click', () => switchTab('results'));
+
+            // Camera Reset
+            inputs.btnHomeCam.addEventListener('click', resetCamera);
+
+            // Friction Buttons
+            inputs.btnFricClean.addEventListener('click', () => {
+                inputs.muRolling.value = 0.02;
+                inputs.muStatic.value = 0.05;
+                inputs.muRolling.dispatchEvent(new Event('input')); // Trigger update
+            });
+            inputs.btnFricDusty.addEventListener('click', () => {
+                inputs.muRolling.value = 0.04; // 2x Standard (0.02 * 2)
+                inputs.muStatic.value = 0.10;  // 2x Standard (0.05 * 2)
+                inputs.muRolling.dispatchEvent(new Event('input'));
+            });
+
+            // Report Button
+            if (inputs.btnReport) {
+                inputs.btnReport.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Report button clicked');
+                    generateReport();
+                    const modal = document.getElementById('report-modal');
+                    if (modal) {
+                        modal.classList.remove('hidden');
+                        console.log('Modal opened');
+                    } else {
+                        console.error('Report modal element not found!');
+                        alert('Report modal not found. Please refresh the page.');
+                    }
+                });
+            } else {
+                console.error('Report button not found!');
+            }
+            
+            const closeBtn = document.getElementById('btn-close-report');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => {
+                    const modal = document.getElementById('report-modal');
+                    if (modal) {
+                        modal.classList.add('hidden');
+                    }
+                });
+            }
+            
+            const modal = document.getElementById('report-modal');
+            if (modal) {
+                // Close on background click
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.classList.add('hidden');
+                    }
+                });
+            }
+
+            // Defaults
+            updateSliderMax();
+            setDriveType('wheel'); 
+            calculateAndRender();
+            animate();
+        }
+
+        function setupScene(container) {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(inputs.colorBg.value); 
+            scene.fog = new THREE.Fog(inputs.colorBg.value, 20, 100);
+
+            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+            resetCamera(); // Set initial position
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.maxPolarAngle = Math.PI / 2 - 0.05;
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+            dirLight.position.set(10, 20, 10);
+            dirLight.castShadow = true;
+            scene.add(dirLight);
+
+            gridHelper = new THREE.GridHelper(100, 100, 0x334155, 0x1e293b);
+            scene.add(gridHelper);
+
+            turntableGroup = new THREE.Group();
+            scene.add(turntableGroup);
+        }
+
+        function resetCamera() {
+            if(camera && controls) {
+                camera.position.set(25, 20, 25);
+                controls.target.set(0, 0, 0);
+                controls.update();
+            } else if (camera) {
+                camera.position.set(25, 20, 25);
+            }
+        }
+
+        function switchTab(tab) {
+            if(tab === 'inputs') {
+                inputs.sidebarInputs.classList.remove('hidden');
+                inputs.sidebarResults.classList.add('hidden');
+                inputs.tabInputs.classList.add('tab-active');
+                inputs.tabInputs.classList.remove('tab-inactive');
+                inputs.tabResults.classList.remove('tab-active');
+                inputs.tabResults.classList.add('tab-inactive');
+            } else {
+                inputs.sidebarInputs.classList.add('hidden');
+                inputs.sidebarResults.classList.remove('hidden');
+                inputs.tabResults.classList.add('tab-active');
+                inputs.tabResults.classList.remove('tab-inactive');
+                inputs.tabInputs.classList.remove('tab-active');
+                inputs.tabInputs.classList.add('tab-inactive');
+            }
+        }
+
+        function setDriveType(type) {
+            isGearDrive = (type === 'gear');
+            
+            if (isGearDrive) {
+                inputs.containerWheel.classList.add('hidden');
+                inputs.containerGear.classList.remove('hidden');
+                inputs.containerGear.classList.add('flex');
+                
+                outputs.lblForceOutput.innerText = "Tangential Force (At Pinion)";
+                outputs.lblSpeedOutput.innerText = "Pinion Speed";
+                outputs.tractionBox.classList.add('hidden'); 
+            } else {
+                inputs.containerWheel.classList.remove('hidden');
+                inputs.containerGear.classList.add('hidden');
+                inputs.containerGear.classList.remove('flex');
+
+                outputs.lblForceOutput.innerText = "Tangential Force (Per Wheel)";
+                outputs.lblSpeedOutput.innerText = "Wheel Speed";
+            }
+            calculateAndRender();
+        }
+
+        function setMode(reverse) {
+            isReverseMode = reverse;
+            if (reverse) {
+                inputs.btnReverse.classList.replace('bg-slate-800', 'bg-emerald-600');
+                inputs.btnReverse.classList.replace('text-slate-400', 'text-white');
+                inputs.btnNormal.classList.replace('bg-blue-600', 'bg-slate-800');
+                inputs.btnNormal.classList.replace('text-white', 'text-slate-400');
+
+                inputs.containerMass.classList.add('hidden');
+                inputs.containerPower.classList.remove('hidden');
+                outputs.mainTitle.innerHTML = '<i class="fa-solid fa-weight-hanging"></i> Capacity Calculation';
+                outputs.blockNormal.classList.add('hidden');
+                outputs.blockReverse.classList.remove('hidden');
+                outputs.torqueTitle.innerText = "Available Torque vs Load";
+                outputs.peakTorqueLabel.innerText = "Max Available Torque";
+            } else {
+                inputs.btnNormal.classList.replace('bg-slate-800', 'bg-blue-600');
+                inputs.btnNormal.classList.replace('text-slate-400', 'text-white');
+                inputs.btnReverse.classList.replace('bg-emerald-600', 'bg-slate-800');
+                inputs.btnReverse.classList.replace('text-white', 'text-slate-400');
+
+                inputs.containerPower.classList.add('hidden');
+                inputs.containerMass.classList.remove('hidden');
+                outputs.mainTitle.innerHTML = '<i class="fa-solid fa-clipboard-check"></i> Recommended Motor Spec';
+                outputs.blockReverse.classList.add('hidden');
+                outputs.blockNormal.classList.remove('hidden');
+                outputs.torqueTitle.innerText = "Stage Torque Analysis";
+                outputs.peakTorqueLabel.innerText = "Peak Torque Needed";
+            }
+            calculateAndRender();
+        }
+
+        function handleInput(id) {
+            if (id === 'diameter') updateSliderMax();
+            if (id === 'driveRadiusSlider') inputs.driveRadiusVal.innerText = inputs.driveRadiusSlider.value;
+        }
+
+        function updateSliderMax() {
+            const R_stage = parseFloat(inputs.diameter.value) / 2;
+            const currentVal = parseFloat(inputs.driveRadiusSlider.value);
+            inputs.driveRadiusSlider.max = R_stage;
+            if(currentVal > R_stage) {
+                inputs.driveRadiusSlider.value = R_stage - 0.5;
+                inputs.driveRadiusVal.innerText = inputs.driveRadiusSlider.value;
+            }
+        }
+
+        function updateColors() {
+            if (scene) {
+                const bgColor = new THREE.Color(inputs.colorBg.value);
+                scene.background = bgColor;
+                scene.fog.color = bgColor;
+            }
+            if (stageMesh) {
+                stageMesh.material.color.set(inputs.colorStage.value);
+            }
+        }
+
+        // --- MAIN LOGIC ---
+        function calculateAndRender() {
+            const D = parseFloat(inputs.diameter.value);
+            const rpm_stage_target = parseFloat(inputs.rpm.value);
+            const t_accel = parseFloat(inputs.accelTime.value);
+            const num_motors = parseInt(inputs.motors.value);
+            const gear_ratio = parseFloat(inputs.gearRatio.value);
+            const eta = parseFloat(inputs.efficiency.value);
+            const mu_rolling = parseFloat(inputs.muRolling.value);
+            const mu_static = parseFloat(inputs.muStatic.value);
+            const max_motor_rpm = parseFloat(inputs.maxMotorRpm.value);
+            
+            const R_stage = D / 2;
+            const R_drive = parseFloat(inputs.driveRadiusSlider.value);
+            
+            let ratio_stage_to_drive = 0; 
+            let drive_element_rpm = 0; 
+            let rpm_motor_req = 0;
+            let r_drive_element = 0; 
+
+            if (isGearDrive) {
+                const teethT = parseInt(inputs.teethTurntable.value);
+                const teethP = parseInt(inputs.teethPinion.value);
+                ratio_stage_to_drive = teethT / teethP; 
+                drive_element_rpm = rpm_stage_target * ratio_stage_to_drive;
+                r_drive_element = R_drive / ratio_stage_to_drive;
+            } else {
+                const wheel_mm = parseFloat(inputs.wheelDia.value);
+                const r_wheel = (wheel_mm / 1000) / 2;
+                r_drive_element = r_wheel;
+                const V_linear = (rpm_stage_target * 2 * Math.PI / 60) * R_drive;
+                const omega_wheel = V_linear / r_wheel;
+                drive_element_rpm = omega_wheel * 60 / (2 * Math.PI);
+                ratio_stage_to_drive = drive_element_rpm / rpm_stage_target;
+            }
+
+            rpm_motor_req = drive_element_rpm * gear_ratio;
+
+            let rpm_motor_effective = rpm_motor_req;
+            let omega_stage_effective = (rpm_stage_target * 2 * Math.PI / 60);
+            let is_limited = false;
+
+            if (rpm_motor_req > max_motor_rpm) {
+                is_limited = true;
+                rpm_motor_effective = max_motor_rpm;
+                const drive_rpm_eff = rpm_motor_effective / gear_ratio;
+                const stage_rpm_eff = drive_rpm_eff / ratio_stage_to_drive;
+                omega_stage_effective = stage_rpm_eff * 2 * Math.PI / 60;
+            }
+
+            actualStageRpm = omega_stage_effective * 60 / (2 * Math.PI);
+            const alpha = omega_stage_effective / t_accel;
+            const drive_element_rpm_final = rpm_motor_effective / gear_ratio;
+            actualDriveRpm = drive_element_rpm_final; // Store for animation
+
+            if (!isReverseMode) {
+                // ... (Same Logic as before) ...
+                const m_tons = parseFloat(inputs.mass.value);
+                const m_kg = m_tons * 1000;
+                const T_rolling = mu_rolling * m_kg * g * R_stage;
+                const I = 0.5 * m_kg * Math.pow(R_stage, 2);
+                const T_accel = I * alpha;
+                const T_static = mu_static * m_kg * g * R_stage;
+                const T_dynamic_total = T_rolling + T_accel;
+                let T_peak_required = 0;
+                let peak_reason = "";
+                if (T_static > T_dynamic_total) {
+                    T_peak_required = T_static;
+                    peak_reason = "Reason: Static Breakaway > Accel";
+                } else {
+                    T_peak_required = T_dynamic_total;
+                    peak_reason = "Reason: Accel + Rolling > Static";
+                }
+                const F_drive_total = T_peak_required / R_drive;
+                const F_per_motor = F_drive_total / num_motors;
+                const T_drive_element = F_per_motor * r_drive_element;
+                const T_motor_req = T_drive_element / (gear_ratio * eta);
+                
+                // Calculate motor angular velocity at operating speed
+                const omega_motor = rpm_motor_effective * 2 * Math.PI / 60;
+                
+                // Calculate rated power required (at rated RPM)
+                // Motor characteristic: Constant torque below rated RPM, constant power above
+                const omega_rated = max_motor_rpm * 2 * Math.PI / 60;
+                let P_rated_required = 0;
+                let P_operating = 0;
+                
+                if (rpm_motor_effective <= max_motor_rpm) {
+                    // Operating below rated RPM: Need constant torque capability
+                    // Required rated torque = T_motor_req (since torque is constant below rated RPM)
+                    // Required rated power = T_rated × ω_rated
+                    P_rated_required = (T_motor_req * omega_rated) / 1000;
+                    P_operating = (T_motor_req * omega_motor) / 1000;
+                } else {
+                    // Operating above rated RPM: Need constant power capability
+                    // Required rated power = P_required_at_speed (since power is constant above rated RPM)
+                    P_operating = (T_motor_req * omega_motor) / 1000;
+                    P_rated_required = P_operating;
+                }
+                
+                // Display rated power (what motor must be rated for)
+                const P_display = P_rated_required;
+                
+                // Calculate TOTAL power requirement for building/facility
+                const P_total_kw = P_display * num_motors; // Total power for all motors
+                
+                // Calculate VA and Current for TOTAL system (3-phase 380V)
+                // For building power assessment - calculate from TOTAL power
+                const power_factor = 0.85; // Typical for induction motors
+                const V_line = 380; // Line voltage (V)
+                const P_total_va = P_total_kw / power_factor; // Total Apparent power in kVA
+                const I_total_current = (P_total_kw * 1000) / (Math.sqrt(3) * V_line * power_factor * eta); // Total Current per phase in A
+                
+                // Per motor values (for reference)
+                const P_va_per_motor = P_display / power_factor;
+                const I_current_per_motor = (P_display * 1000) / (Math.sqrt(3) * V_line * power_factor * eta);
+
+                if(!isGearDrive) {
+                    const F_down_req_N = F_per_motor / mu_traction;
+                    const F_down_req_Tons = F_down_req_N / g / 1000;
+                    outputs.minWeight.innerText = F_down_req_Tons.toFixed(2);
+                    checkTraction(F_down_req_Tons);
+                } else {
+                    outputs.tractionBox.classList.add('hidden');
+                }
+
+                outputs.motorRpm.innerText = Math.round(rpm_motor_effective).toLocaleString();
+                outputs.motorTorque.innerText = T_motor_req.toFixed(2);
+                outputs.power.innerText = P_display.toFixed(2);
+                if (outputs.powerHp) outputs.powerHp.textContent = '(' + (P_display * 1.34102).toFixed(2) + ' hp)';
+                outputs.powerTotal.innerText = P_total_kw.toFixed(2);
+                outputs.totalMotorsCount.textContent = num_motors;
+                // Display TOTAL values for building power assessment
+                outputs.powerVA.innerText = P_total_va.toFixed(2);
+                outputs.current.innerText = I_total_current.toFixed(2);
+                
+                // Store values for report (both per motor and total)
+                window.currentMotorRpm = rpm_motor_effective;
+                window.currentMotorPower = P_display;
+                window.currentMotorPowerTotal = P_total_kw;
+                window.currentMotorVA = P_total_va; // Total VA
+                window.currentMotorCurrent = I_total_current; // Total Current
+                window.currentMotorVAPerMotor = P_va_per_motor;
+                window.currentMotorCurrentPerMotor = I_current_per_motor;
+                
+                // Update additional display elements if they exist
+                const torqueRpmEl = document.getElementById('torque-rpm');
+                const ratedRpmEl = document.getElementById('rated-rpm-display');
+                const powerNoteEl = document.getElementById('power-torque-note');
+                
+                if (torqueRpmEl) torqueRpmEl.textContent = Math.round(rpm_motor_effective).toLocaleString();
+                if (ratedRpmEl) ratedRpmEl.textContent = Math.round(max_motor_rpm).toLocaleString();
+                
+                if (powerNoteEl) {
+                    if (rpm_motor_effective <= max_motor_rpm) {
+                        powerNoteEl.textContent = `Rated power ensures ${T_motor_req.toFixed(1)} Nm constant torque up to ${Math.round(max_motor_rpm)} RPM`;
+                    } else {
+                        powerNoteEl.textContent = `Motor operates in constant power region above rated speed`;
+                    }
+                }
+                
+                // Add warning if torque requirement exceeds motor capability
+                const T_motor_available = (P_rated_required * 1000) / (rpm_motor_effective <= max_motor_rpm ? omega_rated : omega_motor);
+                if (T_motor_req > T_motor_available && Math.abs(T_motor_req - T_motor_available) > 0.1) {
+                    console.warn(`Warning: Required torque ${T_motor_req.toFixed(2)} Nm exceeds available torque ${T_motor_available.toFixed(2)} Nm at ${rpm_motor_effective.toFixed(0)} RPM`);
+                }
+                outputs.peakTorque.innerText = Math.round(T_peak_required).toLocaleString();
+                outputs.peakReason.innerText = peak_reason;
+                outputs.tStatic.innerText = Math.round(T_static).toLocaleString();
+                outputs.tFric.innerText = Math.round(T_rolling).toLocaleString();
+                outputs.tAccel.innerText = Math.round(T_accel).toLocaleString();
+                outputs.forceWheel.innerText = (F_per_motor / 1000).toFixed(1);
+
+            } else {
+                // ... (Same Logic as before) ...
+                const input_kw = parseFloat(inputs.inputPower.value);
+                const omega_motor = rpm_motor_effective * 2 * Math.PI / 60;
+                const omega_rated = max_motor_rpm * 2 * Math.PI / 60;
+                const T_rated = (input_kw * 1000) / omega_rated;
+                let T_motor_avail = 0;
+                if (rpm_motor_effective <= max_motor_rpm) {
+                   T_motor_avail = T_rated;
+                } else {
+                   T_motor_avail = (input_kw * 1000) / omega_motor;
+                }
+                const T_drive_element_avail = T_motor_avail * gear_ratio * eta;
+                const F_motor_avail = T_drive_element_avail / r_drive_element;
+                const T_stage_avail = (F_motor_avail * num_motors) * R_drive;
+                const m_kg_static = T_stage_avail / (mu_static * g * R_stage);
+                const kinematic_factor = (mu_rolling * g * R_stage) + (0.5 * Math.pow(R_stage, 2) * alpha);
+                const m_kg_dynamic = T_stage_avail / kinematic_factor;
+                let max_mass_kg = 0;
+                let limit_factor = "";
+                if (m_kg_static < m_kg_dynamic) {
+                    max_mass_kg = m_kg_static;
+                    limit_factor = "Static Friction (Breakaway)";
+                } else {
+                    max_mass_kg = m_kg_dynamic;
+                    limit_factor = "Acceleration Torque";
+                }
+                const T_static_disp = mu_static * max_mass_kg * g * R_stage;
+                const T_rolling_disp = mu_rolling * max_mass_kg * g * R_stage;
+                const I_disp = 0.5 * max_mass_kg * Math.pow(R_stage, 2);
+                const T_accel_disp = I_disp * alpha;
+
+                // Calculate TOTAL power requirement for building/facility
+                const P_total_kw = input_kw * num_motors; // Total power for all motors
+                
+                // Calculate VA and Current for TOTAL system (3-phase 380V)
+                // For building power assessment - calculate from TOTAL power
+                const power_factor = 0.85; // Typical for induction motors
+                const motor_eff = 0.85; // Motor Efficiency (distinct from Gearbox Efficiency)
+                const V_line = 380; // Line voltage (V)
+                const P_total_va = P_total_kw / (power_factor * motor_eff); // Total Apparent power in kVA
+                const I_total_current = (P_total_kw * 1000) / (Math.sqrt(3) * V_line * power_factor * motor_eff); // Total Current per phase in A
+                
+                // Per motor values (for reference)
+                const P_va_per_motor = input_kw / (power_factor * motor_eff);
+                const I_current_per_motor = (input_kw * 1000) / (Math.sqrt(3) * V_line * power_factor * motor_eff);
+
+                outputs.maxLoad.innerText = (max_mass_kg / 1000).toFixed(3);
+                outputs.limitFactor.innerText = limit_factor;
+                outputs.peakTorque.innerText = Math.round(T_stage_avail).toLocaleString();
+                outputs.peakReason.innerText = "Max Available Torque from Motors";
+                outputs.tStatic.innerText = Math.round(T_static_disp).toLocaleString();
+                outputs.tFric.innerText = Math.round(T_rolling_disp).toLocaleString();
+                outputs.tAccel.innerText = Math.round(T_accel_disp).toLocaleString();
+                outputs.forceWheel.innerText = (F_motor_avail / 1000).toFixed(1);
+
+                // Update Reverse Mode Electrical Displays
+                if (outputs.powerTotalRev) outputs.powerTotalRev.innerText = P_total_kw.toFixed(2);
+                if (outputs.totalMotorsCountRev) outputs.totalMotorsCountRev.textContent = num_motors;
+                if (outputs.powerVARev) outputs.powerVARev.innerText = P_total_va.toFixed(2);
+                if (outputs.currentRev) outputs.currentRev.innerText = I_total_current.toFixed(2);
+                
+                // Keep updating the hidden Normal Mode elements too, just in case specific logic depends on them
+                if (outputs.powerTotal) outputs.powerTotal.innerText = P_total_kw.toFixed(2);
+                if (outputs.totalMotorsCount) outputs.totalMotorsCount.textContent = num_motors;
+                if (outputs.powerVA) outputs.powerVA.innerText = P_total_va.toFixed(2);
+                if (outputs.current) outputs.current.innerText = I_total_current.toFixed(2);
+                
+                // Store values for report (both per motor and total)
+                window.currentMotorRpm = rpm_motor_effective;
+                window.currentMotorPower = input_kw;
+                window.currentMotorPowerTotal = P_total_kw;
+                window.currentMotorVA = P_total_va; // Total VA
+                window.currentMotorCurrent = I_total_current; // Total Current
+                window.currentMotorVAPerMotor = P_va_per_motor;
+                window.currentMotorCurrentPerMotor = I_current_per_motor;
+                
+                if(!isGearDrive) {
+                    const F_down_req_N = F_motor_avail / mu_traction;
+                    const F_down_req_Tons = F_down_req_N / g / 1000;
+                    outputs.minWeight.innerText = F_down_req_Tons.toFixed(2);
+                    checkTraction(F_down_req_Tons);
+                } else {
+                    outputs.tractionBox.classList.add('hidden');
+                }
+            }
+
+            outputs.wheelRpm.innerText = Math.round(drive_element_rpm_final).toLocaleString();
+            outputs.resDriveRad.innerText = R_drive.toFixed(2);
+            outputs.viewDim.innerText = D;
+            outputs.viewDriveRad.innerText = R_drive.toFixed(1);
+
+            handleWarnings(is_limited, rpm_stage_target);
+            
+            // Calculate animation RPMs (use target values, not limited values)
+            // Always use the input RPM for visual animation
+            animationStageRpm = rpm_stage_target;
+            
+            // Calculate drive RPM based on target stage RPM (not limited)
+            if (isGearDrive) {
+                // For gear drive: drive RPM = stage RPM * gear ratio
+                animationDriveRpm = rpm_stage_target * ratio_stage_to_drive;
+            } else {
+                // For wheel drive: calculate from linear velocity
+                const wheel_mm = parseFloat(inputs.wheelDia.value);
+                const r_wheel = (wheel_mm / 1000) / 2;
+                const V_linear = (rpm_stage_target * 2 * Math.PI / 60) * R_drive;
+                const omega_wheel = V_linear / r_wheel;
+                animationDriveRpm = omega_wheel * 60 / (2 * Math.PI);
+            }
+            
+            update3DScene(D, num_motors, animationStageRpm, R_drive, animationDriveRpm);
+        }
+
+        function checkTraction(val) {
+            if (val > 2.0) { 
+                outputs.tractionBox.classList.remove('hidden');
+            } else {
+                outputs.tractionBox.classList.add('hidden');
+            }
+        }
+
+        function handleWarnings(isLimited, target) {
+            if (isLimited) {
+                outputs.rpmWarning.classList.remove('hidden');
+                outputs.warnTargetRpm.innerText = target.toFixed(2);
+                outputs.warnActualRpm.innerText = actualStageRpm.toFixed(2);
+                if(!isReverseMode) {
+                    outputs.motorRpm.classList.add('text-red-400');
+                    outputs.motorRpm.classList.remove('text-emerald-300');
+                }
+            } else {
+                outputs.rpmWarning.classList.add('hidden');
+                if(!isReverseMode) {
+                    outputs.motorRpm.classList.remove('text-red-400');
+                    outputs.motorRpm.classList.add('text-emerald-300');
+                }
+            }
+        }
+
+        // --- 3D SCENE UPDATES ---
+        function update3DScene(diameter, motorCount, targetRpm, driveRadius, driveRpm) {
+            if (!turntableGroup) return;
+
+            while(turntableGroup.children.length > 0){ 
+                turntableGroup.remove(turntableGroup.children[0]); 
+            }
+
+            const R = diameter / 2;
+
+            // Stage Cylinder
+            const canvas = document.createElement('canvas');
+            canvas.width = 512; canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#334155'; ctx.fillRect(0,0,512,512);
+            ctx.strokeStyle = '#475569'; ctx.lineWidth = 5;
+            ctx.beginPath(); ctx.arc(256, 256, 250, 0, Math.PI*2); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(0,256); ctx.lineTo(512,256); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(256,0); ctx.lineTo(256,512); ctx.stroke();
+            
+            // Draw Drive Ring
+            const driveRingRatio = driveRadius / R;
+            ctx.strokeStyle = isGearDrive ? '#f59e0b' : '#3b82f6'; 
+            ctx.lineWidth = isGearDrive ? 6 : 2; 
+            ctx.setLineDash(isGearDrive ? [] : [10, 10]);
+            
+            if (isGearDrive) {
+                // Visualize teeth roughly on texture
+                ctx.setLineDash([5, 5]); 
+            }
+            ctx.beginPath(); ctx.arc(256, 256, 250 * driveRingRatio, 0, Math.PI*2); ctx.stroke();
+
+            const tex = new THREE.CanvasTexture(canvas);
+            const geometry = new THREE.CylinderGeometry(R, R, 0.5, 64);
+            const material = new THREE.MeshStandardMaterial({ 
+                color: inputs.colorStage.value,
+                map: tex,
+                roughness: 0.5,
+                metalness: 0.8
+            });
+            stageMesh = new THREE.Mesh(geometry, material);
+            stageMesh.position.y = 0.5;
+            stageMesh.castShadow = true;
+            stageMesh.receiveShadow = true;
+            turntableGroup.add(stageMesh);
+
+            // Center Pin
+            const centerGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.6, 16);
+            const centerMat = new THREE.MeshBasicMaterial({ color: 0x3b82f6 });
+            const centerPin = new THREE.Mesh(centerGeo, centerMat);
+            centerPin.position.y = 0.5;
+            turntableGroup.add(centerPin);
+
+            // Motors & Wheels/Gears
+            motors.forEach(m => scene.remove(m));
+            motors = [];
+
+            for (let i = 0; i < motorCount; i++) {
+                const angle = (i / motorCount) * Math.PI * 2;
+                const motorGroup = new THREE.Group();
+                
+                // Wheel or Pinion
+                let wheelGeo;
+                if (isGearDrive) {
+                     // Gear shape: Cylinder with simple bumps texture or just simple cylinder for now
+                     wheelGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.3, 15); // Vertical axis (Y)
+                     // No rotation for gear (Axis Y is default)
+                } else {
+                     wheelGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.2, 16); 
+                     wheelGeo.rotateX(Math.PI / 2); // Axis becomes Z
+                }
+                
+                const wheelColor = isGearDrive ? 0xf59e0b : 0xef4444;
+                const wheelMat = new THREE.MeshStandardMaterial({ 
+                    color: wheelColor,
+                    roughness: 0.4 
+                }); 
+                const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+                
+                if (isGearDrive) {
+                    wheel.position.y = 0.5; // Level with stage
+                } else {
+                    wheel.position.y = 0.2; // On floor
+                }
+                
+                motorGroup.add(wheel);
+
+                // Body
+                const bodyGeo = new THREE.BoxGeometry(0.5, 0.5, 0.8);
+                const bodyMat = new THREE.MeshStandardMaterial({ color: 0x1e293b });
+                const body = new THREE.Mesh(bodyGeo, bodyMat);
+                body.position.set(0, 0.45, 0); 
+                motorGroup.add(body);
+
+                const x = Math.cos(angle) * driveRadius;
+                const z = Math.sin(angle) * driveRadius;
+                motorGroup.position.set(x, 0, z);
+                
+                // Look at center so Z axis of the group is tangent? No, lookAt makes Z point to target.
+                // lookAt(0,0,0) -> Z points to center. X points tangent.
+                motorGroup.lookAt(0, 0, 0); 
+                
+                scene.add(motorGroup); 
+                motors.push(motorGroup);
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (stageMesh) {
+                // Rotate Stage - use animation RPM (input value) for visual
+                const omega = animationStageRpm * (2 * Math.PI) / 60;
+                // Show actual RPM in HUD (may be limited)
+                outputs.animRpm.innerText = actualStageRpm.toFixed(1);
+                stageMesh.rotation.y -= omega / 60; 
+
+                // Rotate Wheels/Pinions - use animation drive RPM
+                if (motors.length > 0) {
+                    const omegaDrive = animationDriveRpm * (2 * Math.PI) / 60;
+                    motors.forEach(group => {
+                        // group.children[0] is the wheel mesh
+                        if(group.children[0]) {
+                            if (isGearDrive) {
+                                // Rotate around Y axis (Vertical axis)
+                                group.children[0].rotation.y += omegaDrive / 60; 
+                            } else {
+                                // Rotate around Z axis (Axle pointing to center for Wheel)
+                                group.children[0].rotation.z -= omegaDrive / 60; 
+                            }
+                        }
+                    });
+                }
+            }
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            const container = document.getElementById('canvas-container');
+            if (!container) return;
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        // --- REPORT GENERATION ---
+        function generateReport() {
+            // Get current values
+            const D = parseFloat(inputs.diameter.value);
+            const num_motors = parseInt(inputs.motors.value);
+            const gear_ratio = parseFloat(inputs.gearRatio.value);
+            const eta = parseFloat(inputs.efficiency.value);
+            const rpm_stage = parseFloat(inputs.rpm.value);
+            const t_accel = parseFloat(inputs.accelTime.value);
+            const mu_rolling = parseFloat(inputs.muRolling.value);
+            const mu_static = parseFloat(inputs.muStatic.value);
+            const R_drive = parseFloat(inputs.driveRadiusSlider.value);
+            const max_motor_rpm = parseFloat(inputs.maxMotorRpm.value);
+            
+            let motorPowerPerMotor = 0;
+            let motorRpm = 0;
+            let totalPower = 0;
+            let totalVA = 0;
+            let totalCurrent = 0;
+            let loadCapacity = 0;
+            let reportTitleText = "";
+            let loadLabelText = "";
+
+            // Calculate Electrical values helper
+            const calcElectrical = (p_total_kw) => {
+                 const pf = 0.85; // Power Factor
+                 const motor_eff = 0.85; // Assumed Motor Efficiency (Standard Induction Motor) - distinct from Gearbox Efficiency (eta)
+                 const v = 380;
+                 
+                 // kVA = kW / (PF * Eff) -> This gives the Input Apparent Power
+                 const va = p_total_kw / (pf * motor_eff);
+                 
+                 // Current = (kW * 1000) / (sqrt(3) * V * PF * Eff)
+                 const i = (p_total_kw * 1000) / (Math.sqrt(3) * v * pf * motor_eff);
+                 return { va, i };
+            };
+
+            if (!isReverseMode) {
+                // --- CALC POWER (NORMAL MODE) ---
+                reportTitleText = "Motor Sizing Report";
+                loadLabelText = "Design Load Capacity:";
+                
+                // Get values from Calculation Results
+                motorPowerPerMotor = parseFloat(outputs.power.innerText) || 0;
+                motorRpm = parseInt(outputs.motorRpm.innerText.replace(/,/g, '')) || 0;
+                loadCapacity = parseFloat(inputs.mass.value) || 0;
+                
+                // Calculate Totals based on Required Power
+                totalPower = motorPowerPerMotor * num_motors;
+                const elec = calcElectrical(totalPower);
+                totalVA = elec.va;
+                totalCurrent = elec.i;
+                
+            } else {
+                // --- CALC LOAD (REVERSE MODE) ---
+                reportTitleText = "Load Capacity Assessment Report";
+                loadLabelText = "Max Permissible Load:";
+                
+                // Get values from Inputs (Installed Capacity)
+                // FORCE READ from Input for consistency in Reverse Mode
+                motorPowerPerMotor = parseFloat(inputs.inputPower.value) || 0;
+                
+                // Motor RPM in Reverse Mode: Use Rated Motor RPM (Nameplate) from input
+                // This is the motor's rated speed, not the calculated operating speed
+                motorRpm = Math.round(max_motor_rpm);
+                
+                loadCapacity = parseFloat(outputs.maxLoad.innerText) || 0;
+                
+                // Calculate Totals based on Installed Power
+                totalPower = motorPowerPerMotor * num_motors;
+                const elec = calcElectrical(totalPower);
+                totalVA = elec.va;
+                totalCurrent = elec.i;
+            }
+            
+            // Drive system info logic
+            let driveType = isGearDrive ? 'Gear Drive' : 'Wheel Drive';
+            let wheelDia = 0;
+            let teethTurntable = 0;
+            let teethPinion = 0;
+            let gearRatioStage = 0;
+            let totalRatio = 0;
+
+            if (isGearDrive) {
+                teethTurntable = parseInt(inputs.teethTurntable.value) || 0;
+                teethPinion = parseInt(inputs.teethPinion.value) || 0;
+                gearRatioStage = (teethTurntable / teethPinion).toFixed(2);
+                totalRatio = gear_ratio * (teethTurntable / teethPinion);
+            } else {
+                wheelDia = parseFloat(inputs.wheelDia.value) || 0;
+                totalRatio = gear_ratio;
+            }
+            
+            // Peak torque
+            const peakTorque = parseInt(outputs.peakTorque.innerText.replace(/,/g, '')) || 0;
+            
+            // Update Report UI
+            const titleEl = document.getElementById('report-title');
+            if (titleEl) titleEl.innerHTML = `<i class="fa-solid fa-file-lines mr-2"></i>${reportTitleText}`;
+            
+            const loadLabelEl = document.getElementById('label-report-load');
+            if (loadLabelEl) loadLabelEl.textContent = loadLabelText;
+            
+            const motorPowerHp = (motorPowerPerMotor * 1.34102).toFixed(2);
+            document.getElementById('report-power').textContent = motorPowerPerMotor.toFixed(2) + ' kW (' + motorPowerHp + ' hp)';
+            document.getElementById('report-motors').textContent = num_motors + ' units';
+            document.getElementById('report-motor-rpm').textContent = Math.round(motorRpm).toLocaleString() + ' RPM';
+            
+            document.getElementById('report-total-power').textContent = totalPower.toFixed(2) + ' kW';
+            
+            // Electrical values (Total)
+            const reportVAEl = document.getElementById('report-power-va');
+            const reportCurrentEl = document.getElementById('report-current');
+            const reportTotalVAEl = document.getElementById('report-total-power-va');
+            const reportTotalCurrentEl = document.getElementById('report-total-current');
+            
+            if (reportVAEl) reportVAEl.textContent = totalVA.toFixed(2) + ' kVA';
+            if (reportCurrentEl) reportCurrentEl.textContent = totalCurrent.toFixed(2) + ' A';
+            if (reportTotalVAEl) reportTotalVAEl.textContent = totalVA.toFixed(2) + ' kVA';
+            if (reportTotalCurrentEl) reportTotalCurrentEl.textContent = totalCurrent.toFixed(2) + ' A';
+            
+            document.getElementById('report-load').textContent = loadCapacity.toFixed(2) + ' Tons';
+            document.getElementById('report-diameter').textContent = D.toFixed(1) + ' m';
+            document.getElementById('report-stage-rpm').textContent = rpm_stage.toFixed(2) + ' RPM';
+            
+            document.getElementById('report-drive-type').textContent = driveType;
+            
+            // Wheel drive info
+            if (!isGearDrive) {
+                document.getElementById('report-wheel-info').classList.remove('hidden');
+                document.getElementById('report-gear-info').classList.add('hidden');
+                document.getElementById('report-wheel-dia').textContent = wheelDia.toFixed(0) + ' mm';
+                document.getElementById('report-drive-radius').textContent = R_drive.toFixed(2) + ' m';
+            } else {
+                document.getElementById('report-wheel-info').classList.add('hidden');
+                document.getElementById('report-gear-info').classList.remove('hidden');
+                document.getElementById('report-teeth-turntable').textContent = teethTurntable;
+                document.getElementById('report-teeth-pinion').textContent = teethPinion;
+                document.getElementById('report-gear-ratio-stage').textContent = gearRatioStage + ':1';
+                document.getElementById('report-gear-drive-radius').textContent = R_drive.toFixed(2) + ' m';
+            }
+            
+            document.getElementById('report-gearbox-ratio').textContent = gear_ratio + ':1';
+            document.getElementById('report-total-ratio').textContent = totalRatio.toFixed(2) + ':1';
+            document.getElementById('report-efficiency').textContent = (eta * 100).toFixed(1) + '%';
+            
+            document.getElementById('report-peak-torque').textContent = peakTorque.toLocaleString() + ' Nm';
+            document.getElementById('report-accel-time').textContent = t_accel.toFixed(1) + ' sec';
+            document.getElementById('report-mu-rolling').textContent = mu_rolling.toFixed(3);
+            document.getElementById('report-mu-static').textContent = mu_static.toFixed(3);
+        }
+
+        init();
+
+    </script>
+</body>
+</html>
