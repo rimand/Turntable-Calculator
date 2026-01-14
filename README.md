@@ -1,3 +1,5 @@
+## Website : https://hobot-turntable-cal.netlify.app/
+
 # Turntable Calculator
 
 เครื่องมือคำนวณทางวิศวกรรมสำหรับระบบ Turntable (เวทีหมุน) แบบ Heavy-Duty ที่ใช้ในการคำนวณกำลังมอเตอร์และความจุของระบบหมุนเวที
