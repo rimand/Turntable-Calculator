@@ -157,6 +157,24 @@
                 <div id="input-container-power" class="input-group hidden transition-all">
                     <label class="text-emerald-300">Motor Power per Motor (kW)</label>
                     <input type="number" id="inputPower" value="5.5" step="0.5" min="0.1" class="border-emerald-900/50 bg-emerald-900/10 focus:border-emerald-500">
+                    <div class="mt-3 space-y-2">
+                        <div class="input-group">
+                            <label class="text-emerald-200">Motor Type</label>
+                            <select id="motorType" class="border-emerald-900/50 bg-emerald-900/10 focus:border-emerald-500">
+                                <option value="servo" selected>Servo</option>
+                                <option value="induction">Induction</option>
+                            </select>
+                        </div>
+                        <div id="motor-pole-container" class="input-group hidden">
+                            <label class="text-emerald-200">Induction Motor Poles</label>
+                            <select id="motorPole" class="border-emerald-900/50 bg-emerald-900/10 focus:border-emerald-500">
+                                <option value="2">2 Poles</option>
+                                <option value="4" selected>4 Poles</option>
+                                <option value="6">6 Poles</option>
+                                <option value="8">8 Poles</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -204,6 +222,9 @@
                         <span class="text-xs w-12 text-right"><span id="driveRadiusVal">9.5</span> m</span>
                     </div>
                     <div class="text-[10px] text-slate-500 mt-1">Distance from Center</div>
+                    <div id="drive-radius-gear-note" class="text-[10px] text-amber-400 mt-1 hidden">
+                        Gear drive torque depends on gear ratio; drive radius affects visualization only.
+                    </div>
                 </div>
 
                 <!-- Motors Count -->
@@ -386,6 +407,10 @@
                     
                     <!-- Electrical Info for Reverse Mode -->
                     <div class="mb-3 border-t border-slate-700 pt-3 mt-3">
+                        <div class="flex justify-between items-baseline mb-1">
+                             <div class="text-xs text-slate-400">Motor Rated Torque</div>
+                             <span class="text-xs text-emerald-400 font-mono"><span id="res-motor-rated-torque">0</span> Nm</span>
+                        </div>
                         <div class="text-xs text-slate-400">Total Installed Power</div>
                         <span class="result-value text-emerald-300" id="res-power-total-rev">0.00</span>
                         <span class="result-unit">kW</span>
@@ -447,6 +472,29 @@
                  <div class="flex justify-between items-center text-sm border-b border-slate-800 pb-2">
                     <span class="text-slate-400">Drive Radius</span>
                     <span class="text-slate-200"><span id="res-drive-rad">0</span> m</span>
+                </div>
+            </div>
+
+            <!-- Gearbox Torque Requirements -->
+            <div class="result-card bg-slate-800 border-l-amber-500">
+                <div class="result-label text-amber-300 mb-2">
+                    <i class="fa-solid fa-gear mr-1"></i>Gearbox Torque Requirements
+                </div>
+                <div class="mb-3 border-b border-slate-700 pb-2">
+                    <div class="text-xs text-slate-400 mb-1">Nominal Output Torque (Per Motor)</div>
+                    <span class="result-value text-amber-300" id="res-gearbox-nominal">0</span>
+                    <span class="result-unit">Nm</span>
+                    <div class="text-[10px] text-slate-500 mt-1">Continuous Operation</div>
+                </div>
+                <div class="mb-2">
+                    <div class="text-xs text-slate-400 mb-1">Peak Output Torque (Per Motor)</div>
+                    <span class="result-value text-orange-400" id="res-gearbox-peak">0</span>
+                    <span class="result-unit">Nm</span>
+                    <div class="text-[10px] text-slate-500 mt-1">Startup & Acceleration</div>
+                </div>
+                <div class="text-[10px] text-amber-400/70 italic mt-2 border-t border-slate-700 pt-2">
+                    <i class="fa-solid fa-info-circle mr-1"></i>
+                    Select gearbox with Peak Torque rating ≥ <span id="res-gearbox-peak-min">0</span> Nm (1.5-2x safety factor recommended)
                 </div>
             </div>
 
@@ -586,6 +634,21 @@
                                 <span class="text-slate-400">Efficiency:</span>
                                 <span class="text-white font-bold" id="report-efficiency">-</span>
                             </div>
+                            <div class="flex justify-between border-t border-slate-700 pt-2 mt-2">
+                                <span class="text-slate-400">Nominal Output Torque:</span>
+                                <span class="text-amber-300 font-bold" id="report-gearbox-nominal">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">Peak Output Torque:</span>
+                                <span class="text-orange-300 font-bold" id="report-gearbox-peak">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">Min. Recommended Peak:</span>
+                                <span class="text-red-300 font-bold" id="report-gearbox-peak-min">-</span>
+                            </div>
+                            <div class="text-[10px] text-slate-500 italic mt-1">
+                                *Per motor, with 1.5x safety factor for peak torque
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -656,10 +719,14 @@
             muRolling: document.getElementById('muRolling'),
             muStatic: document.getElementById('muStatic'),
             maxMotorRpm: document.getElementById('maxMotorRpm'),
+            motorType: document.getElementById('motorType'),
+            motorPole: document.getElementById('motorPole'),
+            motorPoleContainer: document.getElementById('motor-pole-container'),
             colorStage: document.getElementById('colorStage'),
             colorBg: document.getElementById('colorBg'),
             driveRadiusSlider: document.getElementById('driveRadiusSlider'),
             driveRadiusVal: document.getElementById('driveRadiusVal'),
+            driveRadiusGearNote: document.getElementById('drive-radius-gear-note'),
             containerMass: document.getElementById('input-container-mass'),
             containerPower: document.getElementById('input-container-power'),
             btnNormal: document.getElementById('mode-normal'),
@@ -719,7 +786,11 @@
             viewDim: document.getElementById('view-dim'),
             viewDriveRad: document.getElementById('view-drive-rad'),
             lblForceOutput: document.getElementById('lbl-force-output'),
-            lblSpeedOutput: document.getElementById('lbl-speed-output')
+            lblSpeedOutput: document.getElementById('lbl-speed-output'),
+            gearboxNominal: document.getElementById('res-gearbox-nominal'),
+            gearboxPeak: document.getElementById('res-gearbox-peak'),
+            gearboxPeakMin: document.getElementById('res-gearbox-peak-min'),
+            motorRatedTorque: document.getElementById('res-motor-rated-torque')
         };
 
         // --- INITIALIZATION ---
@@ -734,6 +805,10 @@
             Object.values(inputs).forEach(input => {
                 if(input instanceof HTMLElement && ['input', 'select'].includes(input.tagName.toLowerCase())) {
                     input.addEventListener('input', (e) => {
+                        // Special handling for motor type/pole changes
+                        if (e.target.id === 'motorType' || e.target.id === 'motorPole') {
+                            updateMotorTypeUI();
+                        }
                         handleInput(e.target.id);
                         calculateAndRender();
                         updateColors();
@@ -825,6 +900,7 @@
 
             // Defaults
             updateSliderMax();
+            updateMotorTypeUI();
             setDriveType('wheel'); 
             calculateAndRender();
             animate();
@@ -897,6 +973,9 @@
                 inputs.containerWheel.classList.add('hidden');
                 inputs.containerGear.classList.remove('hidden');
                 inputs.containerGear.classList.add('flex');
+                if (inputs.driveRadiusGearNote) {
+                    inputs.driveRadiusGearNote.classList.remove('hidden');
+                }
                 
                 outputs.lblForceOutput.innerText = "Tangential Force (At Pinion)";
                 outputs.lblSpeedOutput.innerText = "Pinion Speed";
@@ -905,6 +984,9 @@
                 inputs.containerWheel.classList.remove('hidden');
                 inputs.containerGear.classList.add('hidden');
                 inputs.containerGear.classList.remove('flex');
+                if (inputs.driveRadiusGearNote) {
+                    inputs.driveRadiusGearNote.classList.add('hidden');
+                }
 
                 outputs.lblForceOutput.innerText = "Tangential Force (Per Wheel)";
                 outputs.lblSpeedOutput.innerText = "Wheel Speed";
@@ -947,6 +1029,7 @@
         function handleInput(id) {
             if (id === 'diameter') updateSliderMax();
             if (id === 'driveRadiusSlider') inputs.driveRadiusVal.innerText = inputs.driveRadiusSlider.value;
+            // Removed direct updateMotorTypeUI call from here as it's now handled in the event listener with correct ordering
         }
 
         function updateSliderMax() {
@@ -957,6 +1040,34 @@
                 inputs.driveRadiusSlider.value = R_stage - 0.5;
                 inputs.driveRadiusVal.innerText = inputs.driveRadiusSlider.value;
             }
+        }
+
+        function updateMotorTypeUI() {
+            if (!inputs.motorType || !inputs.motorPoleContainer) return;
+            if (inputs.motorType.value === 'induction') {
+                inputs.motorPoleContainer.classList.remove('hidden');
+                inputs.maxMotorRpm.disabled = true;
+                inputs.maxMotorRpm.classList.add('opacity-50', 'cursor-not-allowed');
+                // Update value immediately
+                inputs.maxMotorRpm.value = getRatedMotorRpm();
+            } else {
+                inputs.motorPoleContainer.classList.add('hidden');
+                inputs.maxMotorRpm.disabled = false;
+                inputs.maxMotorRpm.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        function getRatedMotorRpm() {
+            if (!inputs.motorType) return parseFloat(inputs.maxMotorRpm.value);
+            if (inputs.motorType.value !== 'induction') {
+                return parseFloat(inputs.maxMotorRpm.value);
+            }
+            const poles = parseInt(inputs.motorPole.value || '4', 10);
+            const gridFrequencyHz = 50;
+            // Use standard slip ~3% for calculation
+            const slipFactor = 0.97; 
+            const syncRpm = (120 * gridFrequencyHz) / poles;
+            return Math.round(syncRpm * slipFactor);
         }
 
         function updateColors() {
@@ -1043,10 +1154,23 @@
                     T_peak_required = T_dynamic_total;
                     peak_reason = "Reason: Accel + Rolling > Static";
                 }
-                const F_drive_total = T_peak_required / R_drive;
-                const F_per_motor = F_drive_total / num_motors;
-                const T_drive_element = F_per_motor * r_drive_element;
-                const T_motor_req = T_drive_element / (gear_ratio * eta);
+                // Peak condition (startup / breakaway)
+                const F_drive_total_peak = T_peak_required / R_drive;
+                const F_per_motor_peak = F_drive_total_peak / num_motors;
+                const T_drive_element_peak = F_per_motor_peak * r_drive_element;
+
+                // Operating condition (rolling + acceleration)
+                const F_drive_total_nominal = T_dynamic_total / R_drive;
+                const F_per_motor_nominal = F_drive_total_nominal / num_motors;
+                const T_drive_element_nominal = F_per_motor_nominal * r_drive_element;
+                const T_motor_req = T_drive_element_nominal / (gear_ratio * eta);
+                
+                // Calculate Gearbox Output Torque
+                // Nominal: Torque at operating condition (continuous)
+                const T_gearbox_nominal = T_drive_element_nominal;
+                // Peak: Torque at peak condition (startup / breakaway)
+                const T_gearbox_peak = T_drive_element_peak;
+                const T_gearbox_peak_min = T_gearbox_peak * 1.5; // Minimum recommended with 1.5x safety factor
                 
                 // Calculate motor angular velocity at operating speed
                 const omega_motor = rpm_motor_effective * 2 * Math.PI / 60;
@@ -1088,7 +1212,8 @@
                 const I_current_per_motor = (P_display * 1000) / (Math.sqrt(3) * V_line * power_factor * eta);
 
                 if(!isGearDrive) {
-                    const F_down_req_N = F_per_motor / mu_traction;
+                    // Use peak force for traction check (worst case)
+                    const F_down_req_N = F_per_motor_peak / mu_traction;
                     const F_down_req_Tons = F_down_req_N / g / 1000;
                     outputs.minWeight.innerText = F_down_req_Tons.toFixed(2);
                     checkTraction(F_down_req_Tons);
@@ -1141,16 +1266,26 @@
                 outputs.tStatic.innerText = Math.round(T_static).toLocaleString();
                 outputs.tFric.innerText = Math.round(T_rolling).toLocaleString();
                 outputs.tAccel.innerText = Math.round(T_accel).toLocaleString();
-                outputs.forceWheel.innerText = (F_per_motor / 1000).toFixed(1);
+                // Display nominal tangential force (operating condition)
+                outputs.forceWheel.innerText = (F_per_motor_nominal / 1000).toFixed(1);
+                
+                // Display Gearbox Torque Requirements
+                outputs.gearboxNominal.innerText = Math.round(T_gearbox_nominal).toLocaleString();
+                outputs.gearboxPeak.innerText = Math.round(T_gearbox_peak).toLocaleString();
+                outputs.gearboxPeakMin.innerText = Math.round(T_gearbox_peak_min).toLocaleString();
 
             } else {
                 // ... (Same Logic as before) ...
                 const input_kw = parseFloat(inputs.inputPower.value);
+                const rated_motor_rpm = getRatedMotorRpm();
                 const omega_motor = rpm_motor_effective * 2 * Math.PI / 60;
-                const omega_rated = max_motor_rpm * 2 * Math.PI / 60;
+                const omega_rated = rated_motor_rpm * 2 * Math.PI / 60;
                 const T_rated = (input_kw * 1000) / omega_rated;
+                if (outputs.motorRatedTorque) {
+                    outputs.motorRatedTorque.innerText = T_rated.toFixed(2);
+                }
                 let T_motor_avail = 0;
-                if (rpm_motor_effective <= max_motor_rpm) {
+                if (rpm_motor_effective <= rated_motor_rpm) {
                    T_motor_avail = T_rated;
                 } else {
                    T_motor_avail = (input_kw * 1000) / omega_motor;
@@ -1158,6 +1293,12 @@
                 const T_drive_element_avail = T_motor_avail * gear_ratio * eta;
                 const F_motor_avail = T_drive_element_avail / r_drive_element;
                 const T_stage_avail = (F_motor_avail * num_motors) * R_drive;
+                
+                // Calculate Gearbox Output Torque (Reverse Mode)
+                // Nominal and Peak are the same in reverse mode (using available motor torque)
+                const T_gearbox_nominal_rev = T_drive_element_avail;
+                const T_gearbox_peak_rev = T_drive_element_avail;
+                const T_gearbox_peak_min_rev = T_gearbox_peak_rev * 1.5; // Minimum recommended with 1.5x safety factor
                 const m_kg_static = T_stage_avail / (mu_static * g * R_stage);
                 const kinematic_factor = (mu_rolling * g * R_stage) + (0.5 * Math.pow(R_stage, 2) * alpha);
                 const m_kg_dynamic = T_stage_avail / kinematic_factor;
@@ -1198,6 +1339,11 @@
                 outputs.tFric.innerText = Math.round(T_rolling_disp).toLocaleString();
                 outputs.tAccel.innerText = Math.round(T_accel_disp).toLocaleString();
                 outputs.forceWheel.innerText = (F_motor_avail / 1000).toFixed(1);
+                
+                // Display Gearbox Torque Requirements (Reverse Mode)
+                outputs.gearboxNominal.innerText = Math.round(T_gearbox_nominal_rev).toLocaleString();
+                outputs.gearboxPeak.innerText = Math.round(T_gearbox_peak_rev).toLocaleString();
+                outputs.gearboxPeakMin.innerText = Math.round(T_gearbox_peak_min_rev).toLocaleString();
 
                 // Update Reverse Mode Electrical Displays
                 if (outputs.powerTotalRev) outputs.powerTotalRev.innerText = P_total_kw.toFixed(2);
@@ -1490,9 +1636,8 @@
                 // FORCE READ from Input for consistency in Reverse Mode
                 motorPowerPerMotor = parseFloat(inputs.inputPower.value) || 0;
                 
-                // Motor RPM in Reverse Mode: Use Rated Motor RPM (Nameplate) from input
-                // This is the motor's rated speed, not the calculated operating speed
-                motorRpm = Math.round(max_motor_rpm);
+                // Motor RPM in Reverse Mode: Use Rated Motor RPM from motor type
+                motorRpm = getRatedMotorRpm();
                 
                 loadCapacity = parseFloat(outputs.maxLoad.innerText) || 0;
                 
@@ -1523,6 +1668,11 @@
             
             // Peak torque
             const peakTorque = parseInt(outputs.peakTorque.innerText.replace(/,/g, '')) || 0;
+            
+            // Gearbox Torque values
+            const gearboxNominal = parseInt(outputs.gearboxNominal.innerText.replace(/,/g, '')) || 0;
+            const gearboxPeak = parseInt(outputs.gearboxPeak.innerText.replace(/,/g, '')) || 0;
+            const gearboxPeakMin = parseInt(outputs.gearboxPeakMin.innerText.replace(/,/g, '')) || 0;
             
             // Update Report UI
             const titleEl = document.getElementById('report-title');
@@ -1573,6 +1723,11 @@
             document.getElementById('report-gearbox-ratio').textContent = gear_ratio + ':1';
             document.getElementById('report-total-ratio').textContent = totalRatio.toFixed(2) + ':1';
             document.getElementById('report-efficiency').textContent = (eta * 100).toFixed(1) + '%';
+            
+            // Gearbox Torque Requirements
+            document.getElementById('report-gearbox-nominal').textContent = gearboxNominal.toLocaleString() + ' Nm';
+            document.getElementById('report-gearbox-peak').textContent = gearboxPeak.toLocaleString() + ' Nm';
+            document.getElementById('report-gearbox-peak-min').textContent = gearboxPeakMin.toLocaleString() + ' Nm';
             
             document.getElementById('report-peak-torque').textContent = peakTorque.toLocaleString() + ' Nm';
             document.getElementById('report-accel-time').textContent = t_accel.toFixed(1) + ' sec';
