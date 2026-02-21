@@ -1,223 +1,165 @@
-# Turntable Calculator
+# Mechanic HOBOT Calculator
 
-เครื่องมือคำนวณทางวิศวกรรมสำหรับระบบ Turntable (เวทีหมุน) แบบ Heavy-Duty ที่ใช้ในการคำนวณกำลังมอเตอร์และความจุของระบบหมุนเวที
+Engineering calculator for heavy-duty **turntable** and **linear track** drive systems. Compute motor power, torque, gearbox sizing, braking, and electrical supply from load, speed, and drive parameters.
 
-## 📋 เกี่ยวกับโปรเจกต์
-
-Turntable Calculator เป็นเว็บแอปพลิเคชันที่ออกแบบมาสำหรับวิศวกรและผู้เชี่ยวชาญในการคำนวณและออกแบบระบบ Turntable สำหรับเวทีขนาดใหญ่ โดยคำนวณค่าทางวิศวกรรมที่จำเป็น เช่น กำลังมอเตอร์ แรงบิด ความเร็ว และความจุของระบบ
-
-## ✨ คุณสมบัติหลัก
-
-### 🔄 โหมดการคำนวณ 2 แบบ
-
-1. **โหมดคำนวณกำลังมอเตอร์ (Calc Power)**
-   - คำนวณกำลังมอเตอร์ที่ต้องการตามน้ำหนักและความเร็วที่กำหนด
-   - แสดงค่ากำลังมอเตอร์ แรงบิด ความเร็วที่แนะนำ
-   - คำนวณกำลังไฟฟ้าทั้งหมด กระแสไฟฟ้า และ kVA สำหรับระบบ
-
-2. **โหมดคำนวณความจุ (Calc Load)**
-   - คำนวณน้ำหนักสูงสุดที่ระบบสามารถรองรับได้ตามกำลังมอเตอร์ที่มี
-   - แสดงปัจจัยที่จำกัด (Static Friction หรือ Acceleration Torque)
-
-### ⚙️ ระบบขับเคลื่อน 2 แบบ
-
-1. **Wheel Drive (ระบบขับเคลื่อนด้วยล้อ)**
-   - รองรับการคำนวณด้วยล้อขับเคลื่อน
-   - มีการตรวจสอบความเสี่ยงการลื่นไถล (Traction Warning)
-
-2. **Gear Drive (ระบบขับเคลื่อนด้วยเกียร์)**
-   - รองรับการคำนวณด้วยระบบเกียร์
-   - คำนวณอัตราทดจากจำนวนฟันของเกียร์
-
-### 🎨 การแสดงผล 3 มิติ
-
-- แสดงภาพจำลอง Turntable แบบ 3D ด้วย Three.js
-- แสดงตำแหน่งและจำนวนมอเตอร์แบบเรียลไทม์
-- แสดงการหมุนของเวทีและล้อ/เกียร์ตามค่าที่คำนวณ
-- ปรับมุมมองกล้องได้อิสระ
-
-### 📊 ผลการคำนวณที่ครอบคลุม
-
-- **กำลังมอเตอร์**: กำลังที่ต้องการต่อมอเตอร์และรวมทั้งหมด (kW และ hp)
-- **แรงบิด**: แรงบิดที่จุดต่างๆ ของระบบ (Static, Rolling, Acceleration)
-- **Gearbox Output Torque**: 
-  - **Nominal Output Torque**: แรงบิดที่ Gearbox ต้องรองรับในสภาวะทำงานปกติ
-  - **Peak Output Torque**: แรงบิดสูงสุดที่ Gearbox ต้องรองรับ (ช่วงเริ่มต้นหรือเร่งความเร็ว)
-- **ความเร็ว**: ความเร็วมอเตอร์ ล้อ/เกียร์ และเวที (RPM)
-- **กำลังไฟฟ้า**: kVA และกระแสไฟฟ้าสำหรับระบบ 3-phase 380V
-- **แรงขับเคลื่อน**: แรงในแนวสัมผัสที่ล้อ/เกียร์
-- **คำเตือน**: แจ้งเตือนเมื่อความเร็วเกินขีดจำกัดหรือมีความเสี่ยงการลื่นไถล
-
-### 📄 รายงานทางเทคนิค
-
-- สร้างรายงานทางเทคนิคแบบละเอียด
-- แสดงข้อมูลทั้งหมดที่ใช้ในการคำนวณ
-- เหมาะสำหรับการนำเสนอและเอกสารประกอบ
-
-## 🚀 วิธีใช้งาน
-
-### การติดตั้ง
-
-1. ดาวน์โหลดไฟล์ `index.html`
-2. เปิดไฟล์ด้วยเว็บเบราว์เซอร์ที่รองรับ ES6 Modules (Chrome, Firefox, Edge รุ่นใหม่)
-3. ไม่ต้องติดตั้งหรือรันเซิร์ฟเวอร์ - เปิดไฟล์ได้ทันที
-
-### การใช้งานพื้นฐาน
-
-#### โหมดคำนวณกำลังมอเตอร์
-
-1. เลือกโหมด **"Calc Power"**
-2. ใส่ข้อมูลพื้นฐาน:
-   - **Turntable Diameter**: เส้นผ่านศูนย์กลางเวที (เมตร)
-   - **Total Moving Mass**: น้ำหนักรวมที่เคลื่อนที่ (ตัน)
-   - **Target Speed**: ความเร็วที่ต้องการ (RPM)
-   - **Acceleration Time**: เวลาที่ใช้ในการเร่งความเร็ว (วินาที)
-
-3. กำหนดระบบขับเคลื่อน:
-   - เลือกระบบ **Wheel** หรือ **Gear**
-   - ตั้งค่า Drive Radius (ระยะห่างจากจุดศูนย์กลาง)
-   - กำหนดจำนวนมอเตอร์
-   - ใส่ข้อมูลล้อ (เส้นผ่านศูนย์กลาง) หรือเกียร์ (จำนวนฟัน)
-
-4. ตั้งค่ามอเตอร์:
-   - **Rated Motor Speed**: ความเร็วสูงสุดของมอเตอร์ (RPM)
-   - **Gearbox Ratio**: อัตราทดของเกียร์
-   - **Efficiency**: ประสิทธิภาพของระบบ
-
-5. ตั้งค่าสัมประสิทธิ์แรงเสียดทาน:
-   - **Rolling (Dynamic)**: แรงเสียดทานขณะเคลื่อนที่
-   - **Static (Start)**: แรงเสียดทานขณะเริ่มต้น
-   - หรือใช้ปุ่ม Preset: **Clean** หรือ **Dusty**
-
-6. ดูผลการคำนวณในแผงด้านขวา
-
-#### โหมดคำนวณความจุ
-
-1. เลือกโหมด **"Calc Load"**
-2. ใส่กำลังมอเตอร์ที่มี (kW ต่อมอเตอร์)
-3. ตั้งค่าพารามิเตอร์อื่นๆ เหมือนโหมดปกติ
-4. ดูน้ำหนักสูงสุดที่สามารถรองรับได้
-
-### การดูรายงาน
-
-คลิกปุ่ม **"Report"** ในแผงผลลัพธ์เพื่อสร้างรายงานทางเทคนิคแบบละเอียด
-
-## 🔧 พารามิเตอร์การคำนวณ
-
-### พารามิเตอร์หลัก
-
-- **Turntable Diameter (D)**: เส้นผ่านศูนย์กลางเวที [m]
-- **Total Moving Mass (m)**: น้ำหนักรวม [Tons]
-- **Target Speed (RPM)**: ความเร็วเป้าหมาย [RPM]
-- **Acceleration Time (t_accel)**: เวลาเร่งความเร็ว [s]
-
-### พารามิเตอร์ระบบขับเคลื่อน
-
-**Wheel Drive:**
-- **Drive Wheel Diameter**: เส้นผ่านศูนย์กลางล้อ [mm]
-- **Drive Radius**: ระยะห่างจากจุดศูนย์กลาง [m]
-
-**Gear Drive:**
-- **Turntable Teeth**: จำนวนฟันของเกียร์เวที
-- **Pinion Teeth**: จำนวนฟันของพินิออน
-- **Drive Radius**: ระยะห่างจากจุดศูนย์กลาง [m]
-
-### พารามิเตอร์มอเตอร์และ Gearbox
-
-- **Number of Motors**: จำนวนมอเตอร์
-- **Rated Motor Speed**: ความเร็วสูงสุด [RPM]
-- **Gearbox Ratio (i)**: อัตราทด
-- **Efficiency (η)**: ประสิทธิภาพ (0-1)
-- **Gearbox Output Torque Requirements**:
-  - **Nominal Output Torque**: แรงบิดที่ Gearbox ต้องรองรับในสภาวะทำงานปกติ (ต่อมอเตอร์)
-  - **Peak Output Torque**: แรงบิดสูงสุดที่ Gearbox ต้องรองรับ (ต่อมอเตอร์)
-
-### สัมประสิทธิ์แรงเสียดทาน
-
-- **Rolling (μ_rolling)**: แรงเสียดทานขณะเคลื่อนที่ (ค่าเริ่มต้น: 0.02)
-- **Static (μ_static)**: แรงเสียดทานขณะเริ่มต้น (ค่าเริ่มต้น: 0.05)
-
-## 📐 สูตรการคำนวณ
-
-### แรงบิดที่ต้องการ
-
-- **Static Torque**: `T_static = μ_static × m × g × R_stage`
-- **Rolling Torque**: `T_rolling = μ_rolling × m × g × R_stage`
-- **Acceleration Torque**: `T_accel = I × α` โดยที่ `I = 0.5 × m × R²` และ `α = ω / t_accel`
-- **Peak Torque**: ค่าสูงสุดระหว่าง `T_static` และ `T_rolling + T_accel`
-
-### กำลังมอเตอร์
-
-- **Motor Torque**: `T_motor = (F_drive × r_drive_element) / (gear_ratio × η)`
-- **Motor Power**: `P = T × ω` (คำนวณที่ Rated RPM)
-
-### แรงบิดของ Gearbox
-
-- **Nominal Output Torque (ต่อมอเตอร์)**: `T_gearbox_nominal = T_motor × gear_ratio × η`
-  - คำนวณจากแรงบิดมอเตอร์ที่สภาวะทำงานปกติ
-  - ค่านี้เป็นแรงบิดที่ Gearbox ต้องรองรับได้อย่างต่อเนื่อง
-
-- **Peak Output Torque (ต่อมอเตอร์)**: `T_gearbox_peak = (T_peak_stage / R_drive) × r_drive_element`
-  - คำนวณจากแรงบิดสูงสุดที่เวทีต้องการ (Peak Torque)
-  - ค่านี้เป็นแรงบิดสูงสุดที่ Gearbox ต้องรองรับได้ในช่วงเริ่มต้นหรือเร่งความเร็ว
-  - **สำคัญ**: ควรเลือก Gearbox ที่มี Peak Torque Rating สูงกว่าค่าที่คำนวณได้อย่างน้อย 1.5-2 เท่า เพื่อความปลอดภัย
-
-**หมายเหตุ**: 
-- ค่า Nominal Output Torque ใช้สำหรับการทำงานปกติ
-- ค่า Peak Output Torque ใช้สำหรับการเริ่มต้นและเร่งความเร็ว ซึ่งมักสูงกว่า Nominal มาก
-- ควรตรวจสอบกับผู้ผลิต Gearbox ว่าค่า Rating ที่ระบุเป็น Nominal หรือ Peak
-
-### กำลังไฟฟ้า
-
-- **Apparent Power (kVA)**: `S = P_total / (PF × Motor_Efficiency)`
-- **Current (A)**: `I = P_total / (√3 × V × PF × Motor_Efficiency)`
-- โดยใช้ Power Factor = 0.85 และ Voltage = 380V (3-phase)
-
-## 🎨 การปรับแต่ง
-
-- **Stage Color**: ปรับสีของเวทีในภาพ 3D
-- **Background Color**: ปรับสีพื้นหลัง
-- **Camera Reset**: คลิกปุ่มบ้านเพื่อรีเซ็ตมุมมองกล้อง
-
-## 📱 รองรับการใช้งานบนมือถือ
-
-- ออกแบบให้ใช้งานได้บนมือถือและแท็บเล็ต
-- มีแท็บสำหรับสลับระหว่าง Inputs และ Results
-- ปรับขนาดอัตโนมัติตามขนาดหน้าจอ
-
-## ⚠️ คำเตือนและข้อจำกัด
-
-1. **Motor Speed Limit**: หากความเร็วที่ต้องการเกิน Rated Motor Speed ระบบจะแสดงคำเตือนและจำกัดความเร็ว
-2. **Traction Warning**: สำหรับ Wheel Drive หากแรงกดที่ล้อไม่เพียงพอจะแสดงคำเตือนความเสี่ยงการลื่นไถล
-3. **Gearbox Selection**: 
-   - ต้องเลือก Gearbox ที่มี **Nominal Output Torque** สูงกว่าค่าที่คำนวณได้
-   - ต้องเลือก Gearbox ที่มี **Peak Output Torque** สูงกว่าค่าที่คำนวณได้อย่างน้อย 1.5-2 เท่า
-   - Peak Torque มักเกิดขึ้นในช่วงเริ่มต้น (Static Breakaway) หรือเร่งความเร็ว
-   - ควรตรวจสอบ Service Factor (SF) ของ Gearbox ด้วย
-4. **ค่าคำนวณเป็นค่าประมาณ**: ควรใช้ค่าคำนวณเป็นแนวทางและปรึกษาผู้เชี่ยวชาญก่อนการใช้งานจริง
-
-## 🛠️ เทคโนโลยีที่ใช้
-
-- **HTML5**: โครงสร้างหน้าเว็บ
-- **CSS3**: การจัดรูปแบบด้วย Tailwind CSS
-- **JavaScript (ES6 Modules)**: ตรรกะการคำนวณ
-- **Three.js**: การแสดงผล 3 มิติ
-- **Font Awesome**: ไอคอน
-
-## 📝 หมายเหตุ
-
-- แอปพลิเคชันนี้ทำงานทั้งหมดบนฝั่ง Client (Browser) ไม่ต้องใช้เซิร์ฟเวอร์
-- ข้อมูลทั้งหมดประมวลผลแบบ Real-time เมื่อมีการเปลี่ยนแปลงค่า
-- รองรับเฉพาะเบราว์เซอร์ที่รองรับ ES6 Modules
-
-## 📄 สิทธิ์การใช้งาน
-
-โปรเจกต์นี้เป็น Open Source และสามารถใช้งานได้อย่างอิสระ
-
-## 🤝 การมีส่วนร่วม
-
-ยินดีรับการปรับปรุงและข้อเสนอแนะ! กรุณาสร้าง Issue หรือ Pull Request
+**ภาษาไทย:** เครื่องมือคำนวณทางวิศวกรรมสำหรับระบบ Turntable และ Linear Track แบบ Heavy-Duty ใช้คำนวณกำลังมอเตอร์ แรงบิด ขนาด Gearbox/VFD และรายงาน Spec สำหรับส่งต่อให้ Supplier ได้ทันที
 
 ---
 
-**หมายเหตุ**: เครื่องมือนี้เป็นเครื่องมือช่วยในการคำนวณเบื้องต้น ควรตรวจสอบผลการคำนวณกับวิศวกรผู้เชี่ยวชาญก่อนการใช้งานจริงในโครงการ
+## Overview
+
+Mechanic HOBOT Calculator is a single-page web app for engineers and integrators who need to size motors, gearboxes, and drives for rotating stages (turntables) or linear tracks. It supports two calculation modes (power from load, or load from power), wheel and gear drives, servo and induction motors, and outputs standard motor/VFD recommendations plus a PDF-ready technical report with warnings.
+
+- **Version:** 1.4  
+- **Run:** Open `index.html` in a modern browser (Chrome, Firefox, Edge). No server or install required.  
+- **Data:** All processing is client-side; project state can be saved/loaded (browser storage and JSON file).
+
+---
+
+## Features
+
+### Application modes
+
+- **Turntable** — Rotating stage; inputs: diameter (m), target speed (RPM), drive radius.
+- **Linear Track** — Linear motion; inputs: track length (m), target speed (m/s or m/min).
+
+### Calculation modes
+
+- **Calc Power** — From mass, speed, and kinematics: required motor power (kW), torque, gearbox ratings, total kVA/current.
+- **Calc Load** — From installed motor power: maximum permissible load (tons) and limiting factor.
+
+### Drive systems
+
+- **Wheel drive** — Wheel diameter (mm or inch), drive radius; includes traction/slippage warning.
+- **Gear drive (turntable)** — Stage and pinion teeth, gearbox ratio, drive radius.
+- **Gear drive (linear)** — Rack & pinion: module and teeth (presets or custom), pitch diameter.
+
+### Motor and electrical
+
+- **Motor type:** Servo or Induction (with pole selection for induction).
+- **Rated motor speed:** User-editable; for induction, optional auto-fill from poles.
+- **Recommended standard motor:** Nearest IEC rating (kW) per motor.
+- **Recommended VFD rating:** Standard VFD size (kW) and current (A) for total drive power.
+- **Inertia ratio (JL/JM):** Shown for Servo only; load inertia reflected to motor / motor rotor inertia, with warning if > 10:1.
+
+### Kinematics and braking
+
+- **Acceleration time** and **Deceleration time** (sec).
+- **Acceleration profile:** Linear (trapezoidal) or S-Curve with configurable peak factor.
+- **Braking torque (Nm)** or **Braking force (N)** from deceleration time and load inertia / mass.
+
+### Results and reports
+
+- Torque breakdown: Static (breakaway), Rolling, Acceleration, Design peak (with safety factor), Braking.
+- Gearbox: Nominal and peak output torque; minimum recommended peak (with safety factor).
+- Electrical: Total power (kW), kVA, current (3-phase 380 V).
+- Drive detail: Motor torque (Nm), tangential force (kN), drive element speed (RPM), motor type and rated speed.
+- **Technical report** (on-screen) and **PDF export** (via Report / Export button).
+
+### PDF export — specification sheet
+
+The exported PDF is designed as a one-page spec sheet that can be sent directly to motor/gearbox/VFD suppliers:
+
+- **Warnings & Notes** (top of page, red box) — prominently displays:
+  - **Motor Speed Exceeded** — target vs actual stage speed (with actual speed in large bold red text), rated motor RPM, and cap notice.
+  - **Traction Risk** — minimum wheel downforce required.
+  - **High Inertia Ratio** — JL/JM warning for servo sizing.
+- **Motor sizing / Load capacity result** — summary box with kW, hp, and operating point.
+- **Required Motor** — power per motor, standard motor kW, recommended VFD kW and current, motor speed, total power, kVA, current.
+- **Load & Geometry** — load (tons), size (m), speed.
+- **Kinematics & Friction** — accel/decel time, profile, friction coefficients.
+- **Drive System** — drive type, gearbox ratio, total ratio, efficiency.
+- **Torque Analysis** — static, rolling, acceleration, braking, design peak with limiting factor.
+- **Gearbox Selection** — nominal/peak torque, minimum recommended, safety factor.
+- **Drive Detail** — motor torque, tangential force, drive element speed, rated motor speed, motor type, inertia ratio (servo), min wheel downforce (wheel drive).
+
+If no warnings are active, the warning box is hidden and the PDF remains clean.
+
+### 3D visualization
+
+- **Turntable:** Rotating stage with center pin; motors with IEC-style body (fins, shaft, terminal box, gearbox block), wheel or gear at drive radius.
+- **Linear track:** Rails, moving platform, and same motor assemblies along the track.
+- Real-time animation of stage and drive elements; orbit camera and color customization.
+
+### Project and export
+
+- **Auto-save** to browser storage (latest state restored on reload).
+- **Save File** — Download project as JSON.
+- **Load File** — Import project from JSON.
+
+---
+
+## Quick start
+
+1. Open `index.html` in a browser.
+2. Choose **Turntable** or **Linear Track** and **Calc Power** or **Calc Load**.
+3. Enter geometry (diameter or track length), mass (tons), target speed, acceleration/deceleration times.
+4. Select **Wheel** or **Gear** drive and fill in wheel diameter or gear data (and for linear gear: module/teeth).
+5. Set number of motors, gearbox ratio, efficiency, and (for Calc Power) rated motor speed and motor type.
+6. Read results in the right panel; use **Report** and **Export** for a PDF specification sheet ready for supplier discussion.
+
+---
+
+## Main parameters
+
+| Parameter | Description |
+|-----------|-------------|
+| Diameter / Track length | Stage diameter (m) or track length (m). |
+| Total moving mass | Tons. |
+| Target speed | RPM (turntable) or m/s / m/min (linear). |
+| Acceleration / Deceleration time | Seconds. |
+| Drive radius | Distance from center (turntable) or N/A (linear). |
+| Gearbox ratio, Efficiency | Drive reduction and system efficiency (0–1). |
+| Safety factor (peak torque) | Multiplier for recommended gearbox peak (e.g. 1.5×). |
+| Friction (rolling, static) | μ; presets: Clean, Dusty. |
+
+---
+
+## Calculation outline
+
+- **Torque (turntable):**  
+  Static = μ_static × m × g × R_stage; Rolling = μ_rolling × m × g × R_stage;  
+  Acceleration = I × α (I = ½ m R², α = ω / t_accel); S-Curve multiplies peak acceleration.  
+  Peak = max(Static, Rolling + Acceleration); design peak = peak × safety factor.
+
+- **Force (linear):**  
+  Same structure with linear force F = m×a and friction F = μ×m×g; drive torque from force and drive radius.
+
+- **Braking:**  
+  Same inertia/mass and speed; α_brake = ω / t_decel (or a_brake = v / t_decel); T_brake = I×α_brake or F_brake = m×a_brake.
+
+- **Motor power:**  
+  From required torque/force and gear ratio/efficiency; rated power at rated RPM; total kVA and current for 3-phase 380 V.
+
+- **Standard motor / VFD:**  
+  Nearest standard kW from predefined lists. VFD current from total power and voltage.
+
+- **Inertia ratio (servo):**  
+  J_load reflected to motor shaft (divided by total ratio²) / typical servo rotor inertia from power; warning if > 10.
+
+---
+
+## Technology
+
+- **HTML5, CSS (Tailwind), JavaScript (ES6 modules)**  
+- **Three.js** — 3D scene and animation  
+- **html2pdf.js** — PDF report export  
+- **Font Awesome** — Icons  
+
+Runs entirely in the browser; no backend.
+
+---
+
+## Warnings and limitations
+
+- **Motor speed:** If required RPM exceeds rated motor speed, a warning is shown (on-screen and in PDF) and speed is capped. The PDF prominently displays the actual achievable stage speed.
+- **Traction (wheel drive):** Minimum downforce per wheel is indicated; insufficient downforce can cause slippage.
+- **Gearbox:** Select units with nominal torque ≥ calculated nominal and peak torque ≥ recommended minimum (with safety factor).
+- **Inertia ratio (servo):** Ratio > 10 may require higher ratio or larger motor for stable response.
+- Results are for engineering reference; validate with qualified engineers and equipment data before implementation.
+
+---
+
+## License and contributing
+
+This project is open source. Feedback and contributions (issues, pull requests) are welcome.
